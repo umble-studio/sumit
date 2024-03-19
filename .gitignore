@@ -28,6 +28,7 @@ dist-ssr
 
 # Editor directories and files
 .vscode/*
+.svelte-kit/*
 !.vscode/extensions.json
 .idea
 .DS_Store
