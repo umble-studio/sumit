@@ -1,0 +1,5 @@
+[build]
+out-dir = "dist"
+
+[unstable]
+unstable-options = true
