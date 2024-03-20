@@ -1,6 +1,6 @@
 {
-  "productName": "tauri-app",
-  "identifier": "com.tauri.dev",
+  "productName": "sumit-app",
+  "identifier": "com.sumit.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
