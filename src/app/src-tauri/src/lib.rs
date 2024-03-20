@@ -1,7 +1,8 @@
-use std::{any::Any, ffi::OsStr};
+extern crate libloading;
+
 use anyhow::Result;
 use libloading::{Library, Symbol};
-use log::debug;
+use std::any::Any;
 
 #[macro_export]
 macro_rules! declare_plugin {
@@ -38,37 +39,29 @@ impl PluginManager {
         }
     }
 
-    pub unsafe fn load_plugin<P: AsRef<OsStr>>(&mut self, filename: P) -> Result<()> {
-        type PluginCreate = unsafe fn() -> *mut dyn Plugin;
+    pub unsafe fn load_plugin(&mut self, filename: &str) -> Result<()> {
+        type PluginCreate = extern fn() -> *mut dyn Plugin;
 
-        let lib = Library::new(filename.as_ref()).expect("Failed to load plugin library");
+        let lib = Library::new(filename).expect("Failed to load plugin library");
         self.loaded_libraries.push(lib);
-        
+
         let lib = self.loaded_libraries.last().unwrap();
 
-        let constructor: Symbol<PluginCreate> = lib.get(b"_plugin_create")
-            .expect("The `_plugin_create` symbol wasn't found.");
+        let constructor: Symbol<PluginCreate> = lib
+        .get(b"_plugin_create")
+        .expect("The `_plugin_create` symbol wasn't found.");
 
         let boxed_raw = constructor();
         let plugin = Box::from_raw(boxed_raw);
 
-        debug!("Loaded plugin: {}", plugin.name());
         plugin.on_plugin_load();
-        
         self.plugins.push(plugin);
 
-        // let plugin = constructor() as *mut dyn Plugin;
-        // self.plugins.push(Box::from_raw(plugin));
-
-        // let create_plugin: Symbol<PluginCreate> = lib.get(b"create_plugin")?;
-        // let plugin = create_plugin();
-        
         Ok(())
     }
 
     pub fn unload(&mut self) {
         for plugin in self.plugins.drain(..) {
-            debug!("Firing on_plugin_unload for {:?}", plugin.name());
             plugin.on_plugin_unload();
         }
 

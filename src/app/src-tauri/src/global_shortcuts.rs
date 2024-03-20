@@ -1,5 +1,5 @@
-use std::{collections::HashMap, sync::Arc};
 use std::error::Error;
+use std::{collections::HashMap, sync::Arc};
 use tauri::{App, Window};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 
@@ -14,7 +14,11 @@ impl GlobalShortcuts {
         }
     }
 
-    pub fn register(&mut self, app: &App, window: Arc<Window>) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn register(
+        &mut self,
+        app: &App,
+        window: Arc<Window>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         for (shortcut, action) in &self.shortcuts {
             self.register_shortcut_handler(app, &shortcut, action.clone(), window.clone())?;
             app.global_shortcut().register(shortcut.clone())?;
@@ -27,20 +31,25 @@ impl GlobalShortcuts {
         app: &App,
         shortcut: &Shortcut,
         action: Arc<dyn Fn(&Window) -> Result<(), Box<dyn Error>> + Send + Sync>,
-        window: Arc<Window>) -> Result<(), Box<dyn std::error::Error>> {
-            let shortcut = shortcut.clone();
+        window: Arc<Window>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let shortcut = shortcut.clone();
 
-            app.handle().plugin(
-                tauri_plugin_global_shortcut::Builder::with_handler(move |_app, received_shortcut| {
-                    if received_shortcut == &shortcut {
-                        if let Err(err) = action(&window) {
-                            eprintln!("Error executing shortcut action: {}", err);
+        app.handle()
+            .plugin(
+                tauri_plugin_global_shortcut::Builder::with_handler(
+                    move |_app, received_shortcut| {
+                        if received_shortcut == &shortcut {
+                            if let Err(err) = action(&window) {
+                                eprintln!("Error executing shortcut action: {}", err);
+                            }
                         }
-                    }
-                })
+                    },
+                )
                 .build(),
-            ).unwrap();
-            Ok(())
+            )
+            .unwrap();
+        Ok(())
     }
 
     pub fn add_shortcut<F>(&mut self, shortcut: Shortcut, action: F)
