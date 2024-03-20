@@ -7,6 +7,15 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "sumit"
+path = "src/main.rs"
+
+[lib]
+name = "plugit"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
 [build-dependencies]
 tauri-build = { version = "2.0.0-beta", features = [] }
 
@@ -16,6 +25,10 @@ tauri-plugin-shell = "2.0.0-beta"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 window-vibrancy = "0.5"
+libloading = "0.8"
+anyhow = "1"
+log = "0.4"
+# sumit-plugin = { path = "../../local/plugins/sumit-plugin" }
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 tauri-plugin-global-shortcut = "2.0.0-beta.2"

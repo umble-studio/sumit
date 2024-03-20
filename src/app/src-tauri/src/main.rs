@@ -4,9 +4,8 @@
 use std::sync::Arc;
 
 use global_shortcuts::GlobalShortcuts;
-use tauri::{utils::config::WindowEffectsConfig, window::{Color, Effect, EffectState, EffectsBuilder}, Manager, Window};
+use tauri::{window::{Effect, EffectState, EffectsBuilder}, Manager, Window};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
-// use window_vibrancy::apply_mica;
 
 mod global_shortcuts;
 
