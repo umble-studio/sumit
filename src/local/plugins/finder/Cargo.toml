@@ -10,8 +10,6 @@ name = "finder"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
-# cargo build --release --out-dir=out -Z unstable-options
-
 [dependencies]
 log = "0.4"
 anyhow = "1"
