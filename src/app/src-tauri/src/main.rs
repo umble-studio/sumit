@@ -4,6 +4,8 @@
 use std::sync::Arc;
 
 use global_shortcuts::GlobalShortcuts;
+use log::{error, info};
+use plugit::PluginManager;
 use tauri::{window::{Effect, EffectState, EffectsBuilder}, Manager, Window};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 
@@ -42,6 +44,28 @@ fn main() {
         .invoke_handler(tauri::generate_handler![greet])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    unsafe {
+        load_plugin();
+    }
+}
+
+unsafe fn load_plugin() {
+    const PATH: &str = "C:\\Users\\bubbl\\Documents\\sumitapp\\src\\local\\plugins\\finder\\dist";
+    const FILENAME: &str = "finder.dll";
+
+    info!("Try to load plugin from {:?}", PATH);
+
+    let path = std::path::Path::new(PATH).join(FILENAME);
+    let filename = path.to_str().unwrap();
+
+    let mut plugin_manager = PluginManager::new();
+    
+    if let Ok(_) = plugin_manager.load_plugin(filename) {
+        info!("Plugin loaded successfully");
+    } else {
+        error!("Plugin failed to load");
+    }
 }
 
 fn switch_window_visibility(window: &Window) -> Result<(), Box<dyn std::error::Error>> {

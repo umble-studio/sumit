@@ -1,14 +1,27 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+#[macro_use]
+extern crate log;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[macro_use]
+extern crate plugit;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+use std::str;
+use plugit::Plugin;
+
+#[derive(Debug, Default)]
+pub struct FinderPlugin;
+
+impl Plugin for FinderPlugin {
+    fn name(&self) -> &'static str {
+        "Finder"
+    }
+
+    fn on_plugin_load(&self) {
+        info!("Finder plugin loaded");
+    }
+
+    fn on_plugin_unload(&self) {
+        info!("Finder plugin unloaded");
     }
 }
+
+declare_plugin!(FinderPlugin, FinderPlugin::default);
