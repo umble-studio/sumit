@@ -56,14 +56,10 @@ fn switch_window_visibility(window: &Window) -> Result<(), Box<dyn std::error::E
 }
 
 fn apply_window_effects(window: &Window) {
-    // #[cfg(target_os = "windows")]
-    // apply_mica(&window, None)
-    //     .expect("Unsupported platform! 'apply_mica' is only supported on Windows");
-
     window.set_effects(
         EffectsBuilder::new()
         .state(EffectState::Active)
-        .effect(Effect::Mica)
+        .effect(Effect::Acrylic)
         .build()
     ).unwrap();
 }
