@@ -1,6 +1,6 @@
 [workspace]
+resolver = "2"
 members = [
     "src/app/src-tauri",
-    "src/local/plugins/plugin",
     "src/local/plugins/finder",
 ]
