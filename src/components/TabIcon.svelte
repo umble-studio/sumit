@@ -5,12 +5,12 @@
     export let icon: string | IconifyIcon = "";
     export let color: string | undefined = "white";
     export let gradient: Gradient | undefined = {
-        from: "blue-400",
-        to: "blue-600",
-        orientation: "br",
+        from: "from-blue-400",
+        to: "to-blue-600",
+        orientation: "bg-gradient-to-br",
     };
 </script>
 
-<main class="flex justify-center items-center w-6 h-6 rounded-lg bg-gradient-to-{gradient?.orientation} from-{gradient?.from} to-{gradient?.to}">
+<main class="flex justify-center items-center w-6 h-6 rounded-lg {gradient?.orientation || "bg-gradient-to-br"} {gradient?.from} {gradient?.to}">
     <Icon class="w-full h-full p-1" {icon} {color} />
 </main>
