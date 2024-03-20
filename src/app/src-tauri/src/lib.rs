@@ -1,7 +1,23 @@
 use std::{any::Any, ffi::OsStr};
-use anyhow::{Result, Error};
+use anyhow::Result;
 use libloading::{Library, Symbol};
-use log::{info, trace, warn, debug};
+use log::debug;
+
+#[macro_export]
+macro_rules! declare_plugin {
+    ($plugin_type:ty, $constructor:path) => {
+        #[no_mangle]
+        pub extern "C" fn _plugin_create() -> *mut dyn $crate::Plugin {
+            // make sure the constructor is the correct type.
+            let constructor: fn() -> $plugin_type = $constructor;
+
+            let object = constructor();
+            let boxed: Box<dyn $crate::Plugin> = Box::new(object);
+
+            Box::into_raw(boxed)
+        }
+    };
+}
 
 pub trait Plugin: Any + Send + Sync {
     fn name(&self) -> &'static str;
