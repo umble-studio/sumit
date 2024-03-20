@@ -1,10 +1,10 @@
 {
-  "name": "sumit-plugin",
+  "name": "finder-plugin",
   "version": "1.0.0",
   "description": "",
   "main": "main.ts",
   "scripts": {
-    "start": "npm run build && node build/main.js",
+    "start": "npm run build && node build/index.js",
     "start:dev": "npx nodemon",
     "build": "rimraf ./build && tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
