@@ -24,6 +24,7 @@ pub trait Plugin: Any + Send + Sync {
     fn name(&self) -> &'static str;
     fn on_plugin_load(&self) {}
     fn on_plugin_unload(&self) {}
+    fn register_commands(&self) {}
 }
 
 pub struct PluginManager {
@@ -40,16 +41,18 @@ impl PluginManager {
     }
 
     pub unsafe fn load_plugin(&mut self, filename: &str) -> Result<()> {
-        type PluginCreate = extern fn() -> *mut dyn Plugin;
+        type PluginCreate = extern "C" fn() -> *mut dyn Plugin;
+        const PLUGIN_SYMBOL: &'static [u8] = b"_plugin_create";
 
         let lib = Library::new(filename).expect("Failed to load plugin library");
         self.loaded_libraries.push(lib);
 
         let lib = self.loaded_libraries.last().unwrap();
 
-        let constructor: Symbol<PluginCreate> = lib
-        .get(b"_plugin_create")
-        .expect("The `_plugin_create` symbol wasn't found.");
+        let constructor: Symbol<PluginCreate> = lib.get(PLUGIN_SYMBOL).expect(&format!(
+            "The `{}` symbol wasn't found.",
+            String::from_utf8_lossy(PLUGIN_SYMBOL).to_string()
+        ));
 
         let boxed_raw = constructor();
         let plugin = Box::from_raw(boxed_raw);
@@ -75,6 +78,35 @@ impl Drop for PluginManager {
     fn drop(&mut self) {
         if !self.plugins.is_empty() || !self.loaded_libraries.is_empty() {
             self.unload();
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::PluginManager;
+    use libloading::Library;
+
+    const DLL_PATH: &str = "../../src/local/plugins/finder/dist/finder.dll";
+
+    #[test]
+    fn test_load_library_from_relative_path() {
+        unsafe {
+            let lib = Library::new(DLL_PATH);
+            assert_eq!(lib.is_ok(), true);
+        }
+    }
+
+    #[test]
+    fn test_load_library_from_plugin_manager() {
+        unsafe {
+            let mut plugin_manager = PluginManager::new();
+
+            if let Ok(_) = plugin_manager.load_plugin(DLL_PATH) {
+                assert!(true);
+            } else {
+                assert!(false);
+            }
         }
     }
 }

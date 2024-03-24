@@ -2,10 +2,10 @@
   "productName": "sumit-app",
   "identifier": "com.sumit.app",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
+    "beforeBuildCommand": "dotnet publish -c release src/app.csproj -o dist/webapp-helper",
+    "beforeDevCommand": "dotnet watch --launch-profile http --project src",
+    "devUrl": "http://localhost:5000",
+    "frontendDist": "../dist/webapp-helper/wwwroot"
   },
   "app": {
     "windows": [
@@ -18,15 +18,27 @@
         "fullscreen": false,
         "transparent": true,
         "decorations": false,
-        "skipTaskbar": true
+        "skipTaskbar": true,
+        "windowEffects": {
+          "effects": [
+            "acrylic"
+          ]
+        }
       }
     ],
     "security": {
-      "csp": null
-    }
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      },
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost",
+      "devCsp": "default-src 'self'; img-src 'self' asset: https://asset.localhost"
+    },
+    "withGlobalTauri": true
   },
   "bundle": {
-    "active": false,
+    "active": true,
+    "category": "DeveloperTool",
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -34,6 +46,20 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "allowDowngrades": true,
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "nsis": null,
+      "timestampUrl": "",
+      "tsp": false,
+      "webviewFixedRuntimePath": null,
+      "webviewInstallMode": {
+        "silent": true,
+        "type": "downloadBootstrapper"
+      },
+      "wix": null
+    }
   }
 }

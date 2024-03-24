@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/desktop-schema.json",
+  "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
@@ -18,6 +18,21 @@
     "global-shortcut:allow-is-registered",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
-    "log:allow-log"
+    "log:allow-log",
+    "log:default",
+    "fs:scope-desktop",
+    "fs:scope-desktop-index",
+    "fs:scope-desktop-recursive",
+    "fs:allow-app-meta",
+    "fs:allow-app-meta-recursive",
+    "fs:allow-desktop-read",
+    "fs:allow-desktop-read-recursive",
+    "fs:allow-desktop-write",
+    "fs:allow-desktop-write-recursive",
+    "fs:allow-exists",
+    "fs:allow-write",
+    "fs:allow-read",
+    "fs:write-all",
+    "fs:read-all"
   ]
 }
