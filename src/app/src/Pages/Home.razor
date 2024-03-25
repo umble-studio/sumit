@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using System.Reflection
 @using System.Runtime.Loader
+@using app.Services.Extension
 @using Sumit.Extension
 @using Sumit.Extension.Extensions
 
@@ -15,44 +16,12 @@
 
     private Type? _componentType;
 
-    [Inject] public IJSRuntime Js { get; set; } = null!;
     [Inject] public HttpClient HttpClient { get; set; } = null!;
-
-    private async Task<MemoryStream?> GetMemoryStreamFromFile(string path)
-    {
-        var buffer = await Js.FsReadFile(path);
-        return new MemoryStream(buffer);
-    }
+    [Inject] public ExtensionManager Extensions { get; set; } = null!;
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        const string LocalPluginPath = "sumit-app/src/plugins/bin/Debug/net8.0/Finder.dll";
-        
-        try
-        {
-            var stream = await GetMemoryStreamFromFile(LocalPluginPath);
-            if (stream is null) return;
-            
-            var asm = AssemblyLoadContext.Default.LoadFromStream(stream);
-
-            var mainType = asm.GetTypes().FirstOrDefault(x => x.Name is "Main");
-            if (mainType is null) return;
-
-            if (Activator.CreateInstance(mainType) is Extension extension)
-            {
-                Console.WriteLine("Plugin loaded: " + extension.Name);
-
-                if (!extension.GetComponentEntry(out var attr)) return;
-                _componentType = attr.Type;
-
-                // Only load the extension if a component entry is provided
-                extension.OnLoad();
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Err: " + ex.Message);
-        }
+        await Extensions.LoadExtensions();
     }
 
     protected override async Task OnInitializedAsync()
