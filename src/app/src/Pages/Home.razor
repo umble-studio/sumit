@@ -1,3 +1,85 @@
 ﻿@page "/"
+@using System.Reflection
+@using System.Runtime.Loader
+@using Sumit.Extension
+@using Sumit.Extension.Extensions
 
 <h1 class="text-white text-5xl">Hello, world!</h1>
+
+@if (_componentType is not null)
+{
+    <DynamicComponent Type="_componentType"/>
+}
+
+@code {
+
+    private Type? _componentType;
+
+    [Inject] public IJSRuntime Js { get; set; } = null!;
+    [Inject] public HttpClient HttpClient { get; set; } = null!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        const string LocalPluginPath = "sumit-app/src/plugins/bin/Debug/net8.0/Finder.dll";
+        Console.WriteLine("OnAfterRenderAsync");
+
+        var exists = await Js.FsExists(LocalPluginPath);
+        Console.WriteLine("Exists: " + exists);
+
+        var buffer = await Js.FsReadFile(LocalPluginPath);
+        Console.WriteLine("Buffer: " + buffer);
+
+        try
+        {
+            // var asm = Assembly.Load(buffer);
+            // if (asm is null) return;
+
+            using (var stream = new MemoryStream(buffer))
+            {
+                var asm = AssemblyLoadContext.Default.LoadFromStream(stream);
+                Console.WriteLine("Asm Context: " + asm.FullName);
+
+                var types = asm.GetTypes();
+                Console.WriteLine(string.Join("\n", types.Select(x => x.Name)));
+
+                var mainType = asm.GetTypes().FirstOrDefault(x => x.Name is "Main");
+                if (mainType is null) return;
+
+                if (Activator.CreateInstance(mainType) is IPlugin plugin)
+                {
+                    Console.WriteLine("Plugin loaded: " + plugin.Name);
+
+                    // var myComponent = asm.GetTypes().FirstOrDefault(x => x.Name is "MyComponent");
+                    // if (myComponent is null) return;
+
+                    if (!plugin.GetComponentEntry(out var attr)) return;
+                    _componentType = attr.Type;
+
+                    Console.WriteLine("Loaded component: " + _componentType.Name);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Err: " + ex.Message);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("Home init: " + HttpClient.BaseAddress.AbsoluteUri);
+
+        @* try
+        {
+            var msg = new HttpClient().GetStreamAsync(HttpClient.BaseAddress.AbsoluteUri + "Finder.dll");
+            //var msg = httpClient.GetStreamAsync("file:///C:/Library/DynamicLibrary.dll"); 
+            var stream = msg.Result;
+            var assembly = AssemblyLoadContext.Default.LoadFromStream(stream);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        } *@
+    }
+
+}
