@@ -1,11 +1,6 @@
 ﻿@page "/"
-@using System.Reflection
-@using System.Runtime.Loader
 @using app.Services.Extension
-@using Sumit.Extension
 @using Sumit.Extension.Extensions
-
-<h1 class="text-white text-5xl">Hello, world!</h1>
 
 @if (_componentType is not null)
 {
@@ -22,23 +17,15 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await Extensions.LoadExtensions();
-    }
 
-    protected override async Task OnInitializedAsync()
-    {
-        Console.WriteLine("Home init: " + HttpClient.BaseAddress.AbsoluteUri);
+        if (!Extensions.GetExtension("Finder", out var extension)) return;
+        if (!extension.GetComponentEntry(out var component)) return;
 
-        @* try
+        if (_componentType != component.Type)
         {
-            var msg = new HttpClient().GetStreamAsync(HttpClient.BaseAddress.AbsoluteUri + "Finder.dll");
-            //var msg = httpClient.GetStreamAsync("file:///C:/Library/DynamicLibrary.dll"); 
-            var stream = msg.Result;
-            var assembly = AssemblyLoadContext.Default.LoadFromStream(stream);
+            _componentType = component.Type;
+            StateHasChanged();
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        } *@
     }
 
 }
