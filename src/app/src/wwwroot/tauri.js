@@ -18,6 +18,25 @@ window.fs_readTextFile = async (path) => {
 	return text;
 }
 
+window.fs_readDir = async(path) => {
+	const entries = await fs.readDir(path, { baseDir: 6 });
+	console.log("entries: " + entries);
+	
+	processEntriesRecursive(dir, entries);
+	async function processEntriesRecursive(parent, entries) {
+		for (const entry of entries) {
+			console.log(`Entry: ${entry.name}`);
+			
+			if (entry.isDirectory) {
+				const dir = parent + entry.name;
+				processEntriesRecursive(dir, await fs.readDir(dir, { baseDir: BaseDirectory.App }))
+			}
+		}
+	}
+	
+	return entries;
+}
+
 window.fs_readFile = async (path) => {
 	const buffer = await fs.readFile(path, { baseDir: 6 });
 	console.log("buffer: " + buffer);

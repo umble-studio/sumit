@@ -22,10 +22,26 @@ public sealed class ExtensionRegistry(IJSRuntime js)
 
     public async Task<IReadOnlyList<ExtensionManifest>> GetManifests()
     {
-        throw new NotImplementedException();
+        const string dir = ExtensionManager.LocalPluginDir;
+        var entries = await js.FsReadDir(dir);
+        var manifests = new List<ExtensionManifest>();
+        
+        Console.WriteLine("Entries: " + entries.Length);
+
+        foreach (var entry in entries)
+        {
+            var manifest = await GetManifest(entry);
+            if (manifest is null) continue;
+            
+            manifests.Add(manifest);
+        }
+
+        Console.WriteLine("Manifests: " + manifests.Count);
+        
+        return manifests;
     }
     
-    public async Task<ExtensionManifest> GetManifest(string path)
+    public async Task<ExtensionManifest?> GetManifest(string path)
     {
         var content = await js.FsReadTextFile(path);
         return JsonSerializer.Deserialize<ExtensionManifest>(content)!;

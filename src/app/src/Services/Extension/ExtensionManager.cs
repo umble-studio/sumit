@@ -7,6 +7,9 @@ namespace app.Services.Extension;
 
 public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
 {
+    public const string LocalPluginDir = "sumit-app/src/plugins";
+    // public const string LocalPluginPath = "sumit-app/src/plugins/bin/Debug/net8.0/Finder.dll";
+    
     private readonly List<Sumit.Extension.Extension> _extensions = [];
     
     public async Task LoadExtensions()
@@ -33,8 +36,6 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
 
     private async Task<Sumit.Extension.Extension?> LoadExtension(ExtensionManifest manifest)
     {
-        const string LocalPluginPath = "sumit-app/src/plugins/bin/Debug/net8.0/Finder.dll";
-
         var stream = await GetMemoryStreamFromFile(LocalPluginPath);
         if (stream is null) return null;
 
