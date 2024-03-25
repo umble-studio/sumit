@@ -16,16 +16,16 @@
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await Extensions.LoadExtensions();
-
-        if (!Extensions.GetExtension("Finder", out var extension)) return;
-        if (!extension.GetComponentEntry(out var component)) return;
-
-        if (_componentType != component.Type)
-        {
-            _componentType = component.Type;
-            StateHasChanged();
-        }
+        // await Extensions.LoadExtensions();
+        //
+        // if (!Extensions.GetExtension("Finder", out var extension)) return;
+        // if (!extension.GetComponentEntry(out var component)) return;
+        //
+        // if (_componentType != component.Type)
+        // {
+        //     _componentType = component.Type;
+        //     StateHasChanged();
+        // }
     }
 
 }
