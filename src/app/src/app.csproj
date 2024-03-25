@@ -12,6 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\..\..\Iconify\Iconify.csproj" />
       <ProjectReference Include="..\..\Sumit.Extension\Sumit.Extension.csproj" />
     </ItemGroup>
 
