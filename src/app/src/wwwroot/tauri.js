@@ -19,22 +19,30 @@ window.fs_readTextFile = async (path) => {
 }
 
 window.fs_readDir = async(path) => {
-	const entries = await fs.readDir(path, { baseDir: 6 });
-	console.log("entries: " + entries);
+	const files = [];
+	await processEntriesRecursive(path);
 	
-	processEntriesRecursive(dir, entries);
-	async function processEntriesRecursive(parent, entries) {
+	async function processEntriesRecursive(path) {
+		const entries = await fs.readDir(path, { baseDir: 6 });
+		
 		for (const entry of entries) {
-			console.log(`Entry: ${entry.name}`);
+			// console.log(`Entry: ${entry.name}`);
 			
 			if (entry.isDirectory) {
-				const dir = parent + entry.name;
-				processEntriesRecursive(dir, await fs.readDir(dir, { baseDir: BaseDirectory.App }))
+				const dir = path + "\\" + entry.name;
+				// console.log(`Directory: ${dir}`);
+				await processEntriesRecursive(dir)
+			}
+			
+			if(entry.isFile) {
+				const filePath = (path + "\\" + entry.name);
+				// console.log(`File: ${filePath}`);
+				files.push(filePath);
 			}
 		}
 	}
 	
-	return entries;
+	return files;
 }
 
 window.fs_readFile = async (path) => {
