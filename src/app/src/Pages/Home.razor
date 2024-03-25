@@ -18,45 +18,35 @@
     [Inject] public IJSRuntime Js { get; set; } = null!;
     [Inject] public HttpClient HttpClient { get; set; } = null!;
 
+    private async Task<MemoryStream?> GetMemoryStreamFromFile(string path)
+    {
+        var buffer = await Js.FsReadFile(path);
+        return new MemoryStream(buffer);
+    }
+    
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         const string LocalPluginPath = "sumit-app/src/plugins/bin/Debug/net8.0/Finder.dll";
-        Console.WriteLine("OnAfterRenderAsync");
-
-        var exists = await Js.FsExists(LocalPluginPath);
-        Console.WriteLine("Exists: " + exists);
-
-        var buffer = await Js.FsReadFile(LocalPluginPath);
-        Console.WriteLine("Buffer: " + buffer);
-
+        
         try
         {
-            // var asm = Assembly.Load(buffer);
-            // if (asm is null) return;
+            var stream = await GetMemoryStreamFromFile(LocalPluginPath);
+            if (stream is null) return;
+            
+            var asm = AssemblyLoadContext.Default.LoadFromStream(stream);
 
-            using (var stream = new MemoryStream(buffer))
+            var mainType = asm.GetTypes().FirstOrDefault(x => x.Name is "Main");
+            if (mainType is null) return;
+
+            if (Activator.CreateInstance(mainType) is Extension extension)
             {
-                var asm = AssemblyLoadContext.Default.LoadFromStream(stream);
-                Console.WriteLine("Asm Context: " + asm.FullName);
+                Console.WriteLine("Plugin loaded: " + extension.Name);
 
-                var types = asm.GetTypes();
-                Console.WriteLine(string.Join("\n", types.Select(x => x.Name)));
+                if (!extension.GetComponentEntry(out var attr)) return;
+                _componentType = attr.Type;
 
-                var mainType = asm.GetTypes().FirstOrDefault(x => x.Name is "Main");
-                if (mainType is null) return;
-
-                if (Activator.CreateInstance(mainType) is IPlugin plugin)
-                {
-                    Console.WriteLine("Plugin loaded: " + plugin.Name);
-
-                    // var myComponent = asm.GetTypes().FirstOrDefault(x => x.Name is "MyComponent");
-                    // if (myComponent is null) return;
-
-                    if (!plugin.GetComponentEntry(out var attr)) return;
-                    _componentType = attr.Type;
-
-                    Console.WriteLine("Loaded component: " + _componentType.Name);
-                }
+                // Only load the extension if a component entry is provided
+                extension.OnLoad();
             }
         }
         catch (Exception ex)
