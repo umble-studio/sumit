@@ -48,6 +48,7 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
         if (stream is null) return null;
 
         var asm = AssemblyLoadContext.Default.LoadFromStream(stream);
+        
         var entryType = asm.GetTypes().FirstOrDefault(x => x.IsAssignableTo(typeof(Sumit.Extension.Extension)));
         if (entryType is null) return null;
         
@@ -63,14 +64,16 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
         return !extension.GetComponentEntry(out _) ? null : extension;
     }
 
-    private void EnableExtension(string name)
+    public void EnableExtension(string name)
     {
-        throw new NotImplementedException();
+        if (!GetExtension(name, out var extension)) return;
+        extension.OnEnabled();
     }
 
-    private void DisableExtension(string name)
+    public void DisableExtension(string name)
     {
-        throw new NotImplementedException();
+        if (!GetExtension(name, out var extension)) return;
+        extension.OnDisabled();
     }
 
     public bool IsRegistered(string name) => GetExtension(name, out _);
