@@ -2,8 +2,13 @@
 
 public abstract class Extension
 {
-    public abstract string Name { get; }
-    public bool IsEnabled { get; private set; }
+    public ExtensionManifest Manifest { get; private set; }
+    public bool IsEnabled { get; set; }
+
+    internal void __ctor(ExtensionManifest manifest)
+    {
+        Manifest = manifest;
+    }
     
     public virtual void OnLoad()
     {
