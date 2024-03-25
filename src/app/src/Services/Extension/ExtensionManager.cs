@@ -1,4 +1,5 @@
-﻿using System.Runtime.Loader;
+﻿using System.Reflection;
+using System.Runtime.Loader;
 using Microsoft.JSInterop;
 using Sumit.Extension;
 using Sumit.Extension.Extensions;
@@ -7,17 +8,17 @@ namespace app.Services.Extension;
 
 public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
 {
-    public const string LocalPluginDir = "sumit-app/src/plugins";
+    public const string LocalPluginDir = @"sumit-app\src\plugins";
     // public const string LocalPluginPath = "sumit-app/src/plugins/bin/Debug/net8.0/Finder.dll";
-    
+
     private readonly List<Sumit.Extension.Extension> _extensions = [];
-    
+
     public async Task LoadExtensions()
     {
-        foreach (var manifest in await registry.GetManifests())
+        await foreach (var (path, manifest) in registry.GetManifests())
         {
-            var extension = await LoadExtension(manifest);
-            
+            var extension = await LoadExtension((path, manifest));
+
             if (extension is null)
             {
                 Console.WriteLine($"Failed to load extension: {manifest.Name}");
@@ -26,17 +27,24 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
 
             if (IsRegistered(manifest.Name)) continue;
             _extensions.Add(extension);
-            
+
             extension.OnLoad();
             extension.OnEnabled();
-            
+
             Console.WriteLine($"Loaded extension: {manifest.Name}");
         }
     }
 
-    private async Task<Sumit.Extension.Extension?> LoadExtension(ExtensionManifest manifest)
+    private async Task<Sumit.Extension.Extension?> LoadExtension((string path, ExtensionManifest manifest) info)
     {
-        var stream = await GetMemoryStreamFromFile(LocalPluginPath);
+        var (relPath, manifest) = info;
+        Console.WriteLine($"Loading extension: {manifest.Name} from {relPath}");
+
+        var manifestFileRelPath = Path.Join(LocalPluginDir, relPath).Replace('\\', '/');
+        var pluginDir = Path.GetDirectoryName(manifestFileRelPath)?.Split('/').Last();
+        var entrypointPath = Path.Join(LocalPluginDir, pluginDir, manifest.Client.EntryPoint).Replace('/', '\\');
+
+        var stream = await GetMemoryStreamFromFile(entrypointPath);
         if (stream is null) return null;
 
         var asm = AssemblyLoadContext.Default.LoadFromStream(stream);
@@ -44,8 +52,14 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
         var mainType = asm.GetTypes().FirstOrDefault(x => x.Name is "Main");
         if (mainType is null) return null;
 
-        if (Activator.CreateInstance(mainType, [manifest]) is not Sumit.Extension.Extension extension) return null;
-        
+        if (Activator.CreateInstance(mainType) is not Sumit.Extension.Extension extension) return null;
+
+        var ctor = mainType.GetMethod("__ctor", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (ctor is null) return null;
+
+        // Inject the manifest from the internal __ctor method
+        ctor.Invoke(extension, [manifest]);
+
         // Only return the extension if a component entry is provided
         return !extension.GetComponentEntry(out _) ? null : extension;
     }
@@ -59,14 +73,14 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
     {
         throw new NotImplementedException();
     }
-    
+
     public bool IsRegistered(string name) => GetExtension(name, out _);
 
     public bool GetExtension(string name, out Sumit.Extension.Extension extension)
     {
         extension = _extensions.FirstOrDefault(x => x.Manifest.Name == name)!;
         if (extension is not null) return true;
-        
+
         extension = default!;
         return false;
     }
