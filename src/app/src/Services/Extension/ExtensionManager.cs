@@ -48,18 +48,17 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
         if (stream is null) return null;
 
         var asm = AssemblyLoadContext.Default.LoadFromStream(stream);
+        var entryType = asm.GetTypes().FirstOrDefault(x => x.IsAssignableTo(typeof(Sumit.Extension.Extension)));
+        if (entryType is null) return null;
+        
+        if (Activator.CreateInstance(entryType) is not Sumit.Extension.Extension extension) return null;
 
-        var mainType = asm.GetTypes().FirstOrDefault(x => x.Name is "Main");
-        if (mainType is null) return null;
-
-        if (Activator.CreateInstance(mainType) is not Sumit.Extension.Extension extension) return null;
-
-        var ctor = mainType.GetMethod("__ctor", BindingFlags.Instance | BindingFlags.NonPublic);
+        var ctor = entryType.GetMethod("__ctor", BindingFlags.Instance | BindingFlags.NonPublic);
         if (ctor is null) return null;
 
         // Inject the manifest from the internal __ctor method
         ctor.Invoke(extension, [manifest]);
-
+        
         // Only return the extension if a component entry is provided
         return !extension.GetComponentEntry(out _) ? null : extension;
     }
