@@ -1,5 +1,6 @@
 ﻿@using Iconify
+@using Iconify.Extensions
 
-<main class="w-[32px] h-[32px] bg-white/[.3] rounded-lg flex justify-center items-center">
-    <Iconify i-class="fill-current text-white" Icon="ic:baseline-auto-awesome"></Iconify>
+<main @attributes="@Attributes" class="group w-[32px] h-[32px] p-[6px] bg-white/[.3] rounded-lg flex justify-center items-center @Attributes.Get("class")" style="@Attributes.Get("style")">
+    <Iconify i-class="fill-current text-white w-full h-full" Icon="@Icon"></Iconify>
 </main>
