@@ -1,6 +1,5 @@
 ﻿@page "/"
 @using app.Services.Extension
-@using Sumit.Extension.Extensions
 
 @if (_componentType is not null)
 {
@@ -11,11 +10,15 @@
 
     private Type? _componentType;
 
+    [Inject] public IJSRuntime Js { get; set; } = null!;
     [Inject] public HttpClient HttpClient { get; set; } = null!;
     [Inject] public ExtensionManager Extensions { get; set; } = null!;
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        var paths = await Js.Invoke<List<byte>>("paths", new Dictionary<string, object>());
+        Console.WriteLine("Greet: " + paths.Count);
+
         // await Extensions.LoadExtensions();
         //
         // if (!Extensions.GetExtension("Finder", out var extension)) return;
