@@ -3,37 +3,50 @@ const app = window.__TAURI__.app;
 const http = window.__TAURI__.http;
 const notification = window.__TAURI__.notification;
 const fs = window.__TAURI__.fs;
+const invoke = window.__TAURI__.core.invoke;
+const event = window.__TAURI__.event;
 
 // import { readFileText } from '@tauri-apps/plugin-fs';
 
+window.onload = async () => {
+    // await event.emit("click", {
+    //     name: "sumit",
+    // })
+    
+    await event.listen("ON_FILE_CHANGED", (event) => {
+        console.log("event: " + event.event + ", " + event.payload);
+    })
+}
+
+window.invoke = async (name, args) => {
+    const result = await invoke(name, args);
+    console.log("buffer: " + result);
+    return result;
+}
+
 window.fs_exists = async (path) => {
-    const exists = await fs.exists(path, {baseDir: 6});
-    console.log("exists: " + exists);
-    return exists;
+    return await fs.exists(path, {baseDir: 6});
 }
 
 window.fs_readTextFile = async (path) => {
-    const text = await fs.readTextFile(path, {baseDir: 6});
-    console.log("text: " + text);
-    return text;
+    return await fs.readTextFile(path, {baseDir: 6});
 }
 
 window.fs_readDir = async (path) => {
-	console.log("path: " + path);
     let files = []
     await processEntriesRecursive(path);
-	
+
     async function processEntriesRecursive(path) {
         const entries = await fs.readDir(path, {baseDir: 6})
-		
+
         for (const entry of entries) {
             const dir = path + "\\" + entry.name
-            
+
             if (entry.isDirectory) {
                 await processEntriesRecursive(dir)
             }
-            
-            if(entry.isFile) {
+
+            if (entry.isFile) {
                 files.push(dir)
             }
         }
@@ -43,9 +56,7 @@ window.fs_readDir = async (path) => {
 }
 
 window.fs_readFile = async (path) => {
-    const buffer = await fs.readFile(path, {baseDir: 6});
-    console.log("buffer: " + buffer);
-    return buffer;
+    return await fs.readFile(path, {baseDir: 6});
 }
 
 window.getTauriVersion = async () => {

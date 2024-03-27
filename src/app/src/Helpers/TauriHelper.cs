@@ -1,7 +1,13 @@
+using System.Text.Json;
 using Microsoft.JSInterop;
 
 public static class TauriExtensions
 {
+    public async static Task<T> Invoke<T>(this IJSRuntime js, string name, Dictionary<string, object> args)
+    {
+        return await js.InvokeAsync<T>("invoke", name, args);
+    }
+    
     public async static Task<bool> FsExists(this IJSRuntime js, string path)
     {
         return await js.InvokeAsync<bool>("fs_exists", path);
@@ -21,7 +27,7 @@ public static class TauriExtensions
     {
         return await js.InvokeAsync<string[]>("fs_readDir", path);
     }
-    
+
     public static async Task<string> GetTauriVersion(this IJSRuntime js)
     {
         return await js.InvokeAsync<string>("getTauriVersion");
