@@ -8,9 +8,9 @@ pub struct Extension {
 
 impl Extension {
     pub fn new(&self, manifest: ExtensionManifest) -> Self {
-        Self { 
+        Self {
             manifest,
-            enabled: false,    
+            enabled: false,
         }
     }
 }
@@ -26,14 +26,23 @@ impl ExtensionManager {
         todo!()
     }
 
-    pub fn load_extension(&mut self, path: &str, manifest: ExtensionManifest) {
+    /**
+     * Load a server side extension
+     */
+    pub fn load_extension(&mut self, manifest_path: &str, manifest: ExtensionManifest) {
         todo!()
     }
 
+    /**
+     * Unload a server side extension
+     */
     pub fn unload_extension(&mut self, name: &str) {
         todo!()
     }
 
+    /**
+     * Enable an extension on client & server side
+     */
     pub fn enable_extension(&mut self, name: &str) -> Result<(), ()> {
         if let Some(extension) = self.get_extension(name) {
             extension.enabled = true;
@@ -43,6 +52,9 @@ impl ExtensionManager {
         }
     }
 
+    /**
+     * Disable an extension on client & server side
+     */
     pub fn disable_extension(&mut self, name: &str) -> Result<(), ()> {
         if let Some(extension) = self.get_extension(name) {
             extension.enabled = false;
