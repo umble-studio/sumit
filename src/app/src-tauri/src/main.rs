@@ -48,6 +48,12 @@ fn main() {
         .setup(move |app| {
             let window = app.get_window("main").unwrap();
 
+            #[cfg(debug_assertions)] // only include this code on debug builds
+            {
+                let webview = window.get_webview_window("main").unwrap();
+                webview.open_devtools();
+            }
+
             let window = Arc::new(window);
             global_shortcuts.register(&app, window)?;
 
