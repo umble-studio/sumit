@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Collections;
+using System.Text.Json;
 using Microsoft.JSInterop;
 using Sumit.Extension;
 
@@ -22,17 +23,17 @@ public sealed class ExtensionRegistry(IJSRuntime js)
 
     public async IAsyncEnumerable<(string entry, ExtensionManifest manifest)> GetManifests()
     {
-        const string dir = ExtensionManager.LocalPluginDir; 
-        var entries = await js.FsReadDir(dir);
+        const string dir = ExtensionManager.LocalPluginDir;
 
-        foreach (var entry in entries)
+        var entries = await js.FsReadDir(dir);
+        var files = entries.Where(x => x.EndsWith("manifest.json"));
+
+        foreach (var file in files)
         {
-            if(!entry.EndsWith("manifest.json")) continue;
-            
-            var manifest = await GetManifest(entry);
+            var manifest = await GetManifest(file);
             if (manifest is null) continue;
-            
-            yield return (entry, manifest);
+
+            yield return (file, manifest);
         }
     }
 
