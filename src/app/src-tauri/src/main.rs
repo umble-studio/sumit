@@ -2,22 +2,18 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use global_shortcuts::GlobalShortcuts;
-use log::{error, info};
-use notify::{RecursiveMode, Watcher};
-use plugit::PluginManager;
-use std::path::Path;
 use std::sync::Arc;
 use std::{
-    fs::{self, File},
+    fs::File,
     io::Read,
 };
 use tauri::{Manager, Window};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
-use tauri_plugin_log::{LogLevel, Target, TargetKind, WEBVIEW_TARGET};
+use tauri_plugin_log::{Target, TargetKind};
 
 mod global_shortcuts;
 mod watcher;
-mod dotnet;
+pub mod dotnet;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -28,7 +24,7 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 fn paths() -> &'static [u8] {
     const DLL_PATH: &str =
-        r"C:\Users\bubbl\Documents\sumit-app\src\plugins\Finder\bin\Debug\net8.0\Finder.dll";
+        r"C:\Users\bubbl\Documents\sumit-app\src\plugins\Finder\client\bin\Debug\net8.0\Finder.dll";
 
     let mut file = File::open(DLL_PATH).unwrap();
     let mut buffer = Vec::new();
@@ -47,17 +43,6 @@ fn main() {
         Shortcut::new(Some(Modifiers::CONTROL), Code::KeyN),
         |window| switch_window_visibility(window),
     );
-
-    // let mut watcher = notify::recommended_watcher(|res| {
-    //     match res {
-    //        Ok(event) => println!("event: {:?}", event),
-    //        Err(e) => println!("watch error: {:?}", e),
-    //     }
-    // }).unwrap();
-
-    // // Add a path to be watched. All files and directories at that path and
-    // // below will be monitored for changes.
-    // watcher.watch(Path::new(r"C:\Users\bubbl\Documents\sumit-app\src\plugins"), RecursiveMode::Recursive).unwrap();
 
     let app = tauri::Builder::default()
         .setup(move |app| {
