@@ -37,6 +37,10 @@ impl ExtensionRegistry {
         self.manifests.iter().find(|m| m.name == name).cloned()
     }
 
+    pub fn get_manifests(&self) -> Vec<ExtensionManifest> {
+        self.manifests.clone()
+    }
+
     fn is_registered(&self, name: &str) -> Option<()> {
         let result = self.manifests.iter().any(|manifest| manifest.name == name);
 
