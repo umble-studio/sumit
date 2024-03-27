@@ -18,7 +18,7 @@ public sealed class HotReload
         return _fileWatcher.Initialize();
     }
 
-    private void OnFileChanged(ChangedPayload payload)
+    private void OnFileChanged(ChangedEventArgs payload)
     {
         
     }
