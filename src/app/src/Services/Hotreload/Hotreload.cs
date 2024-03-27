@@ -1,13 +1,13 @@
 using app.Services.FileWatcher;
 using app.Services.FileWatcher.Payload;
 
-namespace app.Services;
+namespace app.Services.HotReload;
 
-public sealed class Hotreload
+public sealed class HotReload
 {
     private readonly FileWatcher.FileWatcher _fileWatcher;
 
-    public Hotreload(FileWatcher.FileWatcher fileWatcher)
+    public HotReload(FileWatcher.FileWatcher fileWatcher)
     {
         _fileWatcher = fileWatcher;
         _fileWatcher.Changed += OnFileChanged;

@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Iconify.Extensions;
 using app;
 using app.Services.Extension;
-using Iconify.Extensions;
 using app.Services.FileWatcher;
-using app.Services;
+using app.Services.HotReload;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -15,6 +15,6 @@ builder.Services.AddIconify();
 builder.Services.AddSingleton<ExtensionRegistry>();
 builder.Services.AddSingleton<ExtensionManager>();
 builder.Services.AddScoped<FileWatcher>();
-builder.Services.AddScoped<Hotreload>();
+builder.Services.AddScoped<HotReload>();
 
 await builder.Build().RunAsync();

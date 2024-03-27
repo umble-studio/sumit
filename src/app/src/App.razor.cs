@@ -1,15 +1,15 @@
-using app.Services;
+using app.Services.HotReload;
 using Microsoft.AspNetCore.Components;
 
 namespace app;
 
 public sealed partial class App : ComponentBase
 {
-    [Inject] public Hotreload Hotreload { get; set; } = null!;
+    [Inject] public HotReload HotReload { get; set; } = null!;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        await Hotreload.Initialize();
+        await HotReload.Initialize();
     }
 }
