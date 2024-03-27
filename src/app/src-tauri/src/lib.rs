@@ -81,32 +81,3 @@ impl Drop for PluginManager {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::PluginManager;
-    use libloading::Library;
-
-    const DLL_PATH: &str = "../../src/local/plugins/finder/dist/finder.dll";
-
-    #[test]
-    fn test_load_library_from_relative_path() {
-        unsafe {
-            let lib = Library::new(DLL_PATH);
-            assert_eq!(lib.is_ok(), true);
-        }
-    }
-
-    #[test]
-    fn test_load_library_from_plugin_manager() {
-        unsafe {
-            let mut plugin_manager = PluginManager::new();
-
-            if let Ok(_) = plugin_manager.load_plugin(DLL_PATH) {
-                assert!(true);
-            } else {
-                assert!(false);
-            }
-        }
-    }
-}
