@@ -14,6 +14,7 @@ use tauri_plugin_log::{Target, TargetKind};
 mod global_shortcuts;
 mod watcher;
 pub mod dotnet;
+pub mod extension;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
