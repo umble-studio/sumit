@@ -1,35 +1,9 @@
 ﻿@page "/"
-@using app.Services.Extension
 @using Microsoft.JSInterop
 
 @if (_componentType is not null)
 {
     <DynamicComponent Type="_componentType"/>
-}
 
-@code {
-
-    private Type? _componentType;
-
-    [Inject] public IJSRuntime Js { get; set; } = null!;
-    [Inject] public HttpClient HttpClient { get; set; } = null!;
-    [Inject] public ExtensionManager Extensions { get; set; } = null!;
-    
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        var paths = await Js.Invoke<List<byte>>("paths", new Dictionary<string, object>());
-        Console.WriteLine("Greet: " + paths.Count);
-
-        // await Extensions.LoadExtensions();
-        //
-        // if (!Extensions.GetExtension("Finder", out var extension)) return;
-        // if (!extension.GetComponentEntry(out var component)) return;
-        //
-        // if (_componentType != component.Type)
-        // {
-        //     _componentType = component.Type;
-        //     StateHasChanged();
-        // }
-    }
-
+    <button class="text-white" @onclick="UnloadExtension">Unload current extension</button>
 }
