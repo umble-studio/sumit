@@ -1,4 +1,4 @@
-use super::registry::{ExtensionManifest, ExtensionRegistry};
+use super::{manifest::ExtensionManifest, registry::ExtensionRegistry};
 
 #[derive(Debug)]
 pub struct Extension {
