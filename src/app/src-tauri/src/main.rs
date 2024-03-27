@@ -17,6 +17,7 @@ use tauri_plugin_log::{LogLevel, Target, TargetKind, WEBVIEW_TARGET};
 
 mod global_shortcuts;
 mod watcher;
+mod dotnet;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
