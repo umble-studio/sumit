@@ -13,14 +13,14 @@ window.onload = async () => {
     //     name: "sumit",
     // })
     
-    await event.listen("ON_FILE_CHANGED", (event) => {
-        console.log("event: " + event.event + ", " + event.payload);
-    })
+    // await event.listen("ON_FILE_CHANGED", (event) => {
+    //     console.log("event: " + event.event + ", " + event.payload);
+    //     DotNet.invokeMethodAsync("app", "OnFileChanged", event.payload);
+    // })
 }
 
 window.invoke = async (name, args) => {
     const result = await invoke(name, args);
-    console.log("buffer: " + result);
     return result;
 }
 
