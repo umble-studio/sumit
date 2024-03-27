@@ -1,0 +1,1 @@
+pub const EXTENSION_DIRECTORY: &str = r"sumit-app\src\plugins";
