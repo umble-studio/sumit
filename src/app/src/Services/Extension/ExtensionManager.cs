@@ -15,26 +15,10 @@ public sealed class ExtensionAssemblyLoadContext() : AssemblyLoadContext(true)
 public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
 {
     public const string LocalPluginDir = @"sumit-app\src\plugins";
-    // public const string LocalPluginPath = "sumit-app/src/plugins/bin/Debug/net8.0/Finder.dll";
 
     private ExtensionAssemblyLoadContext _alc = null!;
     private WeakReference _weakRef = null!;
     private readonly List<Sumit.Extension.Extension> _extensions = [];
-
-    // [MethodImpl(MethodImplOptions.NoInlining)]
-    // private static int LoadAssembly(Stream buffer, out WeakReference weakRef, out MethodInfo? entryPoint)
-    // {
-    //     var alc = new ExtensionAssemblyLoadContext();
-    //     weakRef = new WeakReference(alc);
-    //
-    //     var asm = alc.LoadFromStream(buffer);
-    //
-    //     if (asm is null)
-    //     {
-    //         weakRef = null;
-    //         return 0;
-    //     }
-    // }
 
     public async Task LoadExtensions()
     {
@@ -51,12 +35,6 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
                 continue;
             }
 
-            if (IsRegistered(manifest.Name)) continue;
-            _extensions.Add(extension);
-
-            extension.OnLoad();
-            extension.OnEnabled();
-
             Console.WriteLine($"Loaded extension: {manifest.Name}");
 
             // Unload();
@@ -66,6 +44,7 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
     private async Task<Sumit.Extension.Extension?> LoadExtension((string path, ExtensionManifest manifest) info)
     {
         var (relPath, manifest) = info;
+        
         Console.WriteLine($"Loading extension: {manifest.Name} from {relPath}");
 
         var manifestFileRelPath = Path.Join(LocalPluginDir, relPath).Replace('\\', '/');
@@ -89,6 +68,12 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
         // Inject the manifest from the internal __ctor method
         ctor.Invoke(extension, [manifest]);
 
+        if (IsRegistered(manifest.Name)) return null;
+        _extensions.Add(extension);
+
+        extension.OnEnabled();
+        extension.OnLoad();
+
         // Only return the extension if a component entry is provided
         return !extension.GetComponentEntry(out _) ? null : extension;
     }
@@ -96,7 +81,7 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
     private void Unload()
     {
         Console.WriteLine("Try unload");
-        
+
         _alc.Unload();
 
         for (var i = 0; _weakRef.IsAlive && i < 10; i++)
@@ -104,7 +89,7 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
             GC.Collect();
             GC.WaitForPendingFinalizers();
         }
-        
+
         Console.WriteLine("Unloaded");
     }
 
