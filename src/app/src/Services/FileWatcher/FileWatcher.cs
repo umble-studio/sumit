@@ -1,0 +1,36 @@
+using System.Reflection;
+using Microsoft.JSInterop;
+
+namespace app.Services.FileWatcher;
+
+public sealed partial class FileWatcher
+{
+    private readonly DotNetObjectReference<FileWatcher> _ref = null!;
+    private readonly Lazy<Task<IJSObjectReference>> moduleTask;
+
+    public delegate void FileChangedHandler(ChangedPayload payload);
+    public event FileChangedHandler? Changed;
+
+    public FileWatcher(IJSRuntime js)
+    {
+        _ref = DotNetObjectReference.Create(this);
+
+        moduleTask = new(() => js.InvokeAsync<IJSObjectReference>(
+            "import", $"./js/fileWatcher.js").AsTask());
+    }
+
+    public async ValueTask Initialize()
+    {
+        var module = await moduleTask.Value;
+        await module.InvokeVoidAsync("initialize", _ref);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (moduleTask.IsValueCreated)
+        {
+            var module = await moduleTask.Value;
+            await module.DisposeAsync();
+        }
+    }
+}
