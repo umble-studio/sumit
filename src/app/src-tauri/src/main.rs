@@ -3,20 +3,41 @@
 
 use global_shortcuts::GlobalShortcuts;
 use log::{error, info};
+use notify::{RecursiveMode, Watcher};
 use plugit::PluginManager;
+use std::path::Path;
 use std::sync::Arc;
-use tauri::{
-    Manager, Window,
+use std::{
+    fs::{self, File},
+    io::Read,
 };
+use tauri::{Manager, Window};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 use tauri_plugin_log::{LogLevel, Target, TargetKind, WEBVIEW_TARGET};
 
+mod file_watcher;
 mod global_shortcuts;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+#[tauri::command]
+fn paths() -> &'static [u8] {
+    const DLL_PATH: &str =
+        r"C:\Users\bubbl\Documents\sumit-app\src\plugins\Finder\bin\Debug\net8.0\Finder.dll";
+
+    let mut file = File::open(DLL_PATH).unwrap();
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).unwrap();
+
+    Box::leak(buffer.into_boxed_slice())
+
+    // let buffer = fs::read(DLL_PATH).unwrap();
+    // let buffer = buffer.as_slice();
+    // buffer.clone()
 }
 
 fn main() {
@@ -26,51 +47,48 @@ fn main() {
         |window| switch_window_visibility(window),
     );
 
-    tauri::Builder::default()
-    .setup(move |app| {
-        let window = app.get_window("main").unwrap();
-        
-        let window = Arc::new(window);
-        global_shortcuts.register(&app, window)?;
-        
-        // unsafe {
-        //     load_plugin();
-        // }
-        
-        Ok(())
-    })
-    .plugin(
-        tauri_plugin_log::Builder::new()
-        .targets([
-            Target::new(TargetKind::Stdout),
-            Target::new(TargetKind::LogDir { file_name: None }),
-            Target::new(TargetKind::Webview),
-            ])
-            .build(),
+    // let mut watcher = notify::recommended_watcher(|res| {
+    //     match res {
+    //        Ok(event) => println!("event: {:?}", event),
+    //        Err(e) => println!("watch error: {:?}", e),
+    //     }
+    // }).unwrap();
+
+    // // Add a path to be watched. All files and directories at that path and
+    // // below will be monitored for changes.
+    // watcher.watch(Path::new(r"C:\Users\bubbl\Documents\sumit-app\src\plugins"), RecursiveMode::Recursive).unwrap();
+
+    let app = tauri::Builder::default()
+        .setup(move |app| {
+            let window = app.get_window("main").unwrap();
+
+            let window = Arc::new(window);
+            global_shortcuts.register(&app, window)?;
+
+            Ok(())
+        })
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    Target::new(TargetKind::Stdout),
+                    Target::new(TargetKind::LogDir { file_name: None }),
+                    Target::new(TargetKind::Webview),
+                ])
+                .build(),
         )
-    .plugin(tauri_plugin_fs::init())
-    .plugin(tauri_plugin_shell::init())
-    .invoke_handler(tauri::generate_handler![greet])
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_shell::init())
+        .invoke_handler(tauri::generate_handler![greet, paths])
+        .build(tauri::generate_context!())
+        .expect("error while running tauri builder");
+
+    let handle = app.handle();
+
+    let mut file_watcher =
+        file_watcher::ExtensionWatcher::new(&handle).expect("Failed to watch extensions");
+
+    app.run(|app_handle, event| {});
 }
-
-// unsafe fn load_plugin() {
-//     const PATH: &str = "C:\\Users\\bubbl\\Documents\\sumitapp\\src\\local\\plugins\\finder\\dist";
-//     const FILENAME: &str = "finder.dll";
-
-//     let path = std::path::Path::new(PATH).join(FILENAME);
-
-//     info!("Try to load plugin from {:?}\n", path.to_str().unwrap());
-
-//     let mut plugin_manager = PluginManager::new();
-
-//     if let Ok(_) = plugin_manager.load_plugin(path.to_str().unwrap()) {
-//         info!("Plugin loaded successfully");
-//     } else {
-//         error!("Plugin failed to load");
-//     }
-// }
 
 fn switch_window_visibility(window: &Window) -> Result<(), Box<dyn std::error::Error>> {
     if window.is_visible()? {
