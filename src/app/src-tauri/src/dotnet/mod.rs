@@ -46,6 +46,8 @@ pub fn compile_csharp_assembly(
                 .output()?;
 
             if !output.status.success() {
+                println!("Stdout: {}", String::from_utf8_lossy(&output.stdout));
+
                 println!(
                     "Failed to compile C# assembly: {}",
                     String::from_utf8_lossy(&output.stderr)
@@ -72,7 +74,8 @@ mod tests {
 
     #[test]
     fn test_compile_csharp_assembly() {
-        const PROJECT_PATH: &str = r"C:\Users\bubbl\Documents\sumit-app\src\plugins\Finder";
+        const PROJECT_PATH: &str = r"C:\Users\bubbl\Documents\sumit-app\src\plugins\Finder\client";
+
         let is_compiled =
             self::compile_csharp_assembly(PROJECT_PATH, ReleaseMode::Release).unwrap();
         assert_eq!(is_compiled, true);
