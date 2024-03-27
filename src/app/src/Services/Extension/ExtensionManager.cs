@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using Microsoft.JSInterop;
 using Sumit.Extension;
@@ -6,15 +7,40 @@ using Sumit.Extension.Extensions;
 
 namespace app.Services.Extension;
 
+public sealed class ExtensionAssemblyLoadContext() : AssemblyLoadContext(true)
+{
+    protected override Assembly? Load(AssemblyName assemblyName) => null;
+}
+
 public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
 {
     public const string LocalPluginDir = @"sumit-app\src\plugins";
     // public const string LocalPluginPath = "sumit-app/src/plugins/bin/Debug/net8.0/Finder.dll";
 
+    private ExtensionAssemblyLoadContext _alc = null!;
+    private WeakReference _weakRef = null!;
     private readonly List<Sumit.Extension.Extension> _extensions = [];
+
+    // [MethodImpl(MethodImplOptions.NoInlining)]
+    // private static int LoadAssembly(Stream buffer, out WeakReference weakRef, out MethodInfo? entryPoint)
+    // {
+    //     var alc = new ExtensionAssemblyLoadContext();
+    //     weakRef = new WeakReference(alc);
+    //
+    //     var asm = alc.LoadFromStream(buffer);
+    //
+    //     if (asm is null)
+    //     {
+    //         weakRef = null;
+    //         return 0;
+    //     }
+    // }
 
     public async Task LoadExtensions()
     {
+        _alc = new ExtensionAssemblyLoadContext();
+        _weakRef = new WeakReference(_alc);
+
         await foreach (var (path, manifest) in registry.GetManifests())
         {
             var extension = await LoadExtension((path, manifest));
@@ -32,6 +58,8 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
             extension.OnEnabled();
 
             Console.WriteLine($"Loaded extension: {manifest.Name}");
+
+            // Unload();
         }
     }
 
@@ -47,11 +75,12 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
         var stream = await GetMemoryStreamFromFile(entrypointPath);
         if (stream is null) return null;
 
-        var asm = AssemblyLoadContext.Default.LoadFromStream(stream);
-        
+        // var asm = AssemblyLoadContext.Default.LoadFromStream(stream);
+        var asm = _alc.LoadFromStream(stream);
+
         var entryType = asm.GetTypes().FirstOrDefault(x => x.IsAssignableTo(typeof(Sumit.Extension.Extension)));
         if (entryType is null) return null;
-        
+
         if (Activator.CreateInstance(entryType) is not Sumit.Extension.Extension extension) return null;
 
         var ctor = entryType.GetMethod("__ctor", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -59,9 +88,24 @@ public sealed class ExtensionManager(IJSRuntime js, ExtensionRegistry registry)
 
         // Inject the manifest from the internal __ctor method
         ctor.Invoke(extension, [manifest]);
-        
+
         // Only return the extension if a component entry is provided
         return !extension.GetComponentEntry(out _) ? null : extension;
+    }
+
+    private void Unload()
+    {
+        Console.WriteLine("Try unload");
+        
+        _alc.Unload();
+
+        for (var i = 0; _weakRef.IsAlive && i < 10; i++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+        
+        Console.WriteLine("Unloaded");
     }
 
     public void EnableExtension(string name)
