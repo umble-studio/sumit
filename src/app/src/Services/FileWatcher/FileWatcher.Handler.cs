@@ -6,6 +6,12 @@ namespace app.Services.FileWatcher;
 
 public sealed partial class FileWatcher
 {
+    public delegate void ChangedHandler(ChangedPayload payload);
+    public event ChangedHandler? Changed;
+
+    public delegate void RenamedHandler(RenamedPayload payload);
+    public event RenamedHandler? Renamed;
+
     [JSInvokable("FileChanged")]
     public void OnFileChanged(ChangedPayload payload)
     {
