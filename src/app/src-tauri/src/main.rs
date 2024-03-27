@@ -15,8 +15,8 @@ use tauri::{Manager, Window};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 use tauri_plugin_log::{LogLevel, Target, TargetKind, WEBVIEW_TARGET};
 
-mod file_watcher;
 mod global_shortcuts;
+mod watcher;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -85,7 +85,7 @@ fn main() {
     let handle = app.handle();
 
     let mut file_watcher =
-        file_watcher::ExtensionWatcher::new(&handle).expect("Failed to watch extensions");
+        watcher::ExtensionWatcher::new(&handle).expect("Failed to watch extensions");
 
     app.run(|app_handle, event| {});
 }

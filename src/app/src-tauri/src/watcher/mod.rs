@@ -6,6 +6,10 @@ use notify::{
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
+use crate::watcher::playload::{ChangedPayload, RenamedPayload};
+
+pub mod playload;
+
 pub const EXTENSION_DIRECTORY: &str = r"sumit-app\src\plugins";
 
 pub struct ExtensionWatcher {
@@ -62,7 +66,10 @@ impl ExtensionWatcher {
             ModifyKind::Any => {
                 for path in &event.paths {
                     println!("File changed: {:?}", &path);
-                    app.emit("ON_FILE_CHANGED", &path.display().to_string())
+                    app.emit("FileChanged", ChangedPayload {
+                        path: path.display().to_string(),
+                        is_dir: path.is_dir(),
+                    })
                         .unwrap();
                 }
             }
@@ -75,8 +82,15 @@ impl ExtensionWatcher {
                         // }
 
                         println!("File renamed: {:?}", path);
-                        app.emit("ON_FILE_RENAMED", path.display().to_string())
-                            .unwrap();
+                        
+                        app.emit(
+                            "FileRenamed",
+                            RenamedPayload {
+                                path: path.display().to_string(),
+                                is_dir: path.is_dir(),
+                            },
+                        )
+                        .unwrap();
                     }
                 }
                 _ => {}
@@ -90,7 +104,7 @@ impl ExtensionWatcher {
     fn get_extension_full_dir() -> String {
         if let Some(documents_dir) = dirs::document_dir() {
             let full_path = PathBuf::from(documents_dir).join(EXTENSION_DIRECTORY);
-            
+
             println!("Extension full path: {:?}", full_path);
 
             if let Some(extension_path) = full_path.to_str() {
