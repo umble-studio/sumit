@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using app.Services.FileWatcher.Payload;
 using Microsoft.JSInterop;
 
