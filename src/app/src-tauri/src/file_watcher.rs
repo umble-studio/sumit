@@ -1,11 +1,12 @@
-use std::path::Path;
+use core::panic;
 use notify::{
     event::{DataChange, ModifyKind, RenameMode},
     EventKind, Watcher,
 };
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-pub const EXTENSION_DIRECTORY: &str = r"C:\Users\bubbl\Documents\sumit-app\src\plugins";
+pub const EXTENSION_DIRECTORY: &str = r"sumit-app\src\plugins";
 
 pub struct ExtensionWatcher {
     pub watcher: notify::RecommendedWatcher,
@@ -13,27 +14,26 @@ pub struct ExtensionWatcher {
 
 impl ExtensionWatcher {
     pub fn new(handle: &AppHandle) -> notify::Result<Self> {
+        let watch_dir = Self::get_extension_full_dir();
         let handle_clone = handle.clone();
 
         let mut watcher =
             notify::recommended_watcher(move |event| Self::event_handler(event, &handle_clone))?;
 
         // Start to watch the extension directory
-        Self::watch(&mut watcher, EXTENSION_DIRECTORY)?;
+        Self::watch(&mut watcher, &watch_dir)?;
         Ok(Self { watcher })
     }
 
     pub fn watch(watcher: &mut notify::RecommendedWatcher, path: &str) -> notify::Result<()> {
-        // Commence à surveiller le répertoire récursivement
         watcher
             .watch(Path::new(path), notify::RecursiveMode::Recursive)
-            .expect("Failed to watch path");
+            .expect(format!("Failed to watch path: {:?}", path).as_str());
         Ok(())
     }
 
     #[allow(dead_code)]
     pub fn unwatch(&mut self, path: &str) -> notify::Result<()> {
-        // Arrête de surveiller le répertoire
         self.watcher.unwatch(Path::new(path))
     }
 
@@ -45,7 +45,7 @@ impl ExtensionWatcher {
                     EventKind::Access(_) => {}
                     EventKind::Create(_) => {}
                     EventKind::Remove(_) => {}
-                    EventKind::Modify(kind) => Self::on_modify_entry(&app, &event,&kind),
+                    EventKind::Modify(kind) => Self::on_modify_entry(&app, &event, &kind),
                     EventKind::Other => {}
                 }
 
@@ -62,27 +62,44 @@ impl ExtensionWatcher {
             ModifyKind::Any => {
                 for path in &event.paths {
                     println!("File changed: {:?}", &path);
-                    app.emit("ON_FILE_CHANGED", &path.display().to_string()).unwrap();
+                    app.emit("ON_FILE_CHANGED", &path.display().to_string())
+                        .unwrap();
                 }
             }
             ModifyKind::Name(rename) => match rename {
                 RenameMode::Any | RenameMode::To => {
                     for path in &event.paths {
                         // if path.extension() == Some(OsStr::new("dll")) {
-                            //     println!("File changed: {:?}", path);
-                            //     app.emit("ON_FILE_CHANGED", path.display().to_string()).unwrap();
-                            // }
-                            
-                            println!("File renamed: {:?}", path);
-                            app.emit("ON_FILE_RENAMED", path.display().to_string())
+                        //     println!("File changed: {:?}", path);
+                        //     app.emit("ON_FILE_CHANGED", path.display().to_string()).unwrap();
+                        // }
+
+                        println!("File renamed: {:?}", path);
+                        app.emit("ON_FILE_RENAMED", path.display().to_string())
                             .unwrap();
                     }
                 }
                 _ => {}
             },
             ModifyKind::Data(_) => {}
-            ModifyKind::Metadata(_) => {},
-            ModifyKind::Other => {},
+            ModifyKind::Metadata(_) => {}
+            ModifyKind::Other => {}
+        }
+    }
+
+    fn get_extension_full_dir() -> String {
+        if let Some(documents_dir) = dirs::document_dir() {
+            let full_path = PathBuf::from(documents_dir).join(EXTENSION_DIRECTORY);
+            
+            println!("Extension full path: {:?}", full_path);
+
+            if let Some(extension_path) = full_path.to_str() {
+                extension_path.to_string()
+            } else {
+                panic!("Failed to convert extension path to string");
+            }
+        } else {
+            panic!("Failed to get documents directory");
         }
     }
 }
