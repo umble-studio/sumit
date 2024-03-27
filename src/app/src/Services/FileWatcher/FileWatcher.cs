@@ -8,8 +8,11 @@ public sealed partial class FileWatcher
     private readonly DotNetObjectReference<FileWatcher> _ref = null!;
     private readonly Lazy<Task<IJSObjectReference>> moduleTask;
 
-    public delegate void FileChangedHandler(ChangedPayload payload);
-    public event FileChangedHandler? Changed;
+    public delegate void ChangedHandler(ChangedPayload payload);
+    public event ChangedHandler? Changed;
+
+    public delegate void RenamedHandler(RenamedPayload payload);
+    public event RenamedHandler? Renamed;
 
     public FileWatcher(IJSRuntime js)
     {

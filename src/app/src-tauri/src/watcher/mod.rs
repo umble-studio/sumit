@@ -66,23 +66,22 @@ impl ExtensionWatcher {
             ModifyKind::Any => {
                 for path in &event.paths {
                     println!("File changed: {:?}", &path);
-                    app.emit("FileChanged", ChangedPayload {
-                        path: path.display().to_string(),
-                        is_dir: path.is_dir(),
-                    })
-                        .unwrap();
+
+                    app.emit(
+                        "FileChanged",
+                        ChangedPayload {
+                            path: path.display().to_string(),
+                            is_dir: path.is_dir(),
+                        },
+                    )
+                    .unwrap();
                 }
             }
             ModifyKind::Name(rename) => match rename {
                 RenameMode::Any | RenameMode::To => {
                     for path in &event.paths {
-                        // if path.extension() == Some(OsStr::new("dll")) {
-                        //     println!("File changed: {:?}", path);
-                        //     app.emit("ON_FILE_CHANGED", path.display().to_string()).unwrap();
-                        // }
-
                         println!("File renamed: {:?}", path);
-                        
+
                         app.emit(
                             "FileRenamed",
                             RenamedPayload {
