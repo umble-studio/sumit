@@ -29,7 +29,7 @@ impl Extension {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-enum ExtensionState {
+pub enum ExtensionState {
     Enabled,
     Disabled,
 }
