@@ -6,7 +6,9 @@ use std::{
 
 use anyhow::anyhow;
 use libloading::{Library, Symbol};
-use tauri::{AppHandle, Manager};
+use tauri::{utils::acl::manifest, AppHandle, Manager};
+
+use crate::extension;
 
 use super::{manifest::ExtensionManifest, registry::ExtensionRegistry};
 
@@ -49,6 +51,7 @@ impl Extension {
         }
     }
 }
+
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ExtensionState {
@@ -133,7 +136,7 @@ impl<'a> ExtensionManager<'a> {
 
             unsafe {
                 if let Ok(lib) = Library::new(filename) {
-                    let extension = Extension::new(manifest);
+                    let mut extension = Extension::new(manifest);
 
                     let constructor: Symbol<ExtensionCreate> =
                         lib.get(EXTENSION_SYMBOL).expect(&format!(
@@ -142,10 +145,12 @@ impl<'a> ExtensionManager<'a> {
                         ));
 
                     let boxed_raw = constructor();
-                    let instance = Box::from_raw(boxed_raw);
 
-                    instance.on_load();
+                    self.enable_extension(&mut extension)?;
                     self.extensions.push(extension);
+
+                    let instance = Box::from_raw(boxed_raw);
+                    instance.on_load();
 
                     // println!("Loaded extension: {}", manifest_clone.name);
 
@@ -170,53 +175,31 @@ impl<'a> ExtensionManager<'a> {
     /**
      * Unload a server side extension
      */
-    pub fn unload_extension(&mut self, name: &str) {
-        if let Some(extension) = self.get_extension(name) {
-            extension.on_unload();
-            extension.enabled = false;
-
-            if let Some(lib) = extension.lib.take() {
-                drop(lib);
-            } else {
-                println!("Failed to drop extension: {}", name);
-            }
-        } else {
-            println!("Failed to unload extension: {}", name);
-        }
+    pub fn unload_extension(&mut self, extension: &mut Extension) {
+        self.disable_extension(extension).unwrap();
+        self.extensions.retain(|e| e.manifest.name != extension.manifest.name);
+        
+        extension.on_unload();
     }
 
     /**
      * Enable an extension on client & server side
      */
-    pub fn enable_extension(&mut self, name: &str) -> Result<(), tauri::Error> {
-        if let Some(extension) = self.get_extension(name) {
-            extension.enabled = true;
-            self.handle.emit("extension:enabled", ())?;
+    pub fn enable_extension(&mut self, extension: &mut Extension) -> Result<(), tauri::Error> {
+        extension.enabled = true;
+        self.handle.emit("extension:enabled", ())?;
 
-            Ok(())
-        } else {
-            Err(tauri::Error::Anyhow(anyhow!(
-                "Failed to enable extension: {}",
-                name
-            )))
-        }
+        Ok(())
     }
 
     /**
      * Disable an extension on client & server side
      */
-    pub fn disable_extension(&mut self, name: &str) -> Result<(), tauri::Error> {
-        if let Some(extension) = self.get_extension(name) {
-            extension.enabled = false;
-            self.handle.emit("extension:disabled", ())?;
+    pub fn disable_extension(&mut self, extension: &mut Extension) -> Result<(), tauri::Error> {
+        extension.enabled = false;
+        self.handle.emit("extension:disabled", ())?;
 
-            Ok(())
-        } else {
-            Err(tauri::Error::Anyhow(anyhow!(
-                "Failed to disable extension: {}",
-                name
-            )))
-        }
+        Ok(())
     }
 
     pub fn get_extension(&mut self, name: &str) -> Option<&mut Extension> {
@@ -227,7 +210,7 @@ impl<'a> ExtensionManager<'a> {
         }
     }
 
-    fn get_extension_lib(&mut self, name: &str) -> Option<&Library> {
+    pub fn get_extension_lib(&mut self, name: &str) -> Option<&Library> {
         if let Some(extension) = self.extensions.iter().find(|e| e.manifest.name == name) {
             if let Some(lib) = extension.lib.as_ref() {
                 Some(lib)
@@ -262,7 +245,7 @@ mod tests {
                 .join("server")
                 .join("dist")
                 .join("server.dll");
-            
+
             println!("Manifest path: {}", manifest_path.to_str().unwrap());
 
             type ExtensionCreate = extern "C" fn() -> *mut dyn IExtension;
