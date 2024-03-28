@@ -3,10 +3,16 @@ use notify::{
     event::{DataChange, ModifyKind, RenameMode},
     EventKind, Watcher,
 };
-use std::path::{Path, PathBuf};
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
 use tauri::{AppHandle, Manager};
 
-use crate::watcher::playload::{ChangedPayload, RenamedPayload};
+use crate::{
+    dotnet::{compile_csharp_assembly, ReleaseMode}, paths, watcher::playload::{AssemblyUpdatedPayload, ChangedPayload, RenamedPayload}
+};
 
 pub mod playload;
 
@@ -75,6 +81,45 @@ impl ExtensionWatcher {
                         },
                     )
                     .unwrap();
+                    
+                    let watch_dir = Self::get_extension_full_dir();
+
+                    let allowed_extensions = ["cs", "cshtml", "razor", "html", "js", "css", "ts", "scss", "less", "json", "csproj"];
+
+                    if let Some(extension) = path.extension().and_then(|e| e.to_str()) {
+                        if allowed_extensions.contains(&extension) {
+                            let path_str = path.to_str().unwrap();
+                            let root_dir = path_str.replace(watch_dir.as_str(), "");
+
+                            println!("New path: {:?}", root_dir);
+        
+                            if let Ok(is_compiled) = compile_csharp_assembly(path_str, ReleaseMode::Release)
+                            {
+                                if is_compiled {
+                                    let mut file = File::open(path).unwrap();
+                                    let mut buffer = Vec::new();
+                                    file.read_to_end(&mut buffer).unwrap();
+        
+                                    let buffer = Box::leak(buffer.into_boxed_slice());
+        
+                                    app.emit(
+                                        "AssemblyUpdated",
+                                        AssemblyUpdatedPayload {
+                                            path: path.display().to_string(),
+                                            is_dir: path.is_dir(),
+                                            buffer,
+                                        },
+                                    )
+                                    .unwrap();
+        
+                                    println!("Assembly updated: {:?}", &path);
+                                } else {
+                                    panic!("Failed to compile C# assembly");
+                                }
+                            } else {
+                            }
+                        }
+                    }
                 }
             }
             ModifyKind::Name(rename) => match rename {
