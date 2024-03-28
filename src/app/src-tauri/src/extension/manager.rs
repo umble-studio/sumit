@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::{any::Any, borrow::{Borrow, BorrowMut}};
 
 use anyhow::anyhow;
 use libloading::Library;
@@ -26,6 +26,7 @@ macro_rules! declare_extension {
 pub struct Extension {
     pub manifest: ExtensionManifest,
     pub enabled: bool,
+    pub lib: Option<Library>,
 }
 
 pub trait IExtension: Any + Send + Sync {
@@ -40,6 +41,7 @@ impl Extension {
         Self {
             manifest,
             enabled: false,
+            lib: None,
         }
     }
 }
@@ -72,7 +74,6 @@ pub struct ExtensionManager<'a> {
     pub handle: &'a AppHandle,
     pub registry: ExtensionRegistry,
     pub extensions: Vec<Extension>,
-    pub loaded_extensions: Vec<Library>,
 }
 
 impl<'a> ExtensionManager<'a> {
@@ -83,7 +84,6 @@ impl<'a> ExtensionManager<'a> {
             handle,
             registry,
             extensions: vec![],
-            loaded_extensions: vec![],
         }
     }
 
@@ -92,8 +92,8 @@ impl<'a> ExtensionManager<'a> {
 
         for manifest_info in self.registry.get_manifests() {
             let manifest_path = manifest_info.0;
-            let manifest = manifest_info.1;
-
+            let manifest
+            
             if let Some(extension) = self.load_extension(&manifest_path, manifest.clone()) {
                 println!("Loaded extension: {}", manifest.name);
             } else {
@@ -117,7 +117,18 @@ impl<'a> ExtensionManager<'a> {
      * Unload a server side extension
      */
     pub fn unload_extension(&mut self, name: &str) {
-        todo!()
+        if let Some(extension) = self.get_extension(name) {
+            extension.on_unload();
+            extension.enabled = false;
+
+            if let Some(lib) = extension.lib.take() {
+                drop(lib);
+            } else {
+                println!("Failed to drop extension: {}", name);
+            }
+        } else {
+            println!("Failed to unload extension: {}", name);
+        }
     }
 
     /**
@@ -157,6 +168,18 @@ impl<'a> ExtensionManager<'a> {
     pub fn get_extension(&mut self, name: &str) -> Option<&mut Extension> {
         if let Some(extension) = self.extensions.iter_mut().find(|e| e.manifest.name == name) {
             Some(extension)
+        } else {
+            None
+        }
+    }
+
+    fn get_extension_lib(&mut self, name: &str) -> Option<&Library> {
+        if let Some(extension) = self.extensions.iter().find(|e| e.manifest.name == name) {
+            if let Some(lib) = extension.lib.as_ref() {
+                Some(lib)
+            } else {
+                None
+            }
         } else {
             None
         }
