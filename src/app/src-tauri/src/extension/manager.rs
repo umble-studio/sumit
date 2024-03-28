@@ -1,4 +1,7 @@
+use std::any::Any;
+
 use anyhow::anyhow;
+use libloading::Library;
 use tauri::{AppHandle, Manager};
 
 use super::{manifest::ExtensionManifest, registry::ExtensionRegistry};
@@ -7,6 +10,13 @@ use super::{manifest::ExtensionManifest, registry::ExtensionRegistry};
 pub struct Extension {
     pub manifest: ExtensionManifest,
     pub enabled: bool,
+}
+
+pub trait IExtension: Any + Send + Sync {
+    fn state(&self) -> ExtensionState;
+    fn manifest(&self) -> ExtensionManifest;
+    fn on_load(&self);
+    fn on_unload(&self);
 }
 
 impl Extension {
@@ -18,11 +28,35 @@ impl Extension {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+enum ExtensionState {
+    Enabled,
+    Disabled,
+}
+
+impl IExtension for Extension {
+    fn state(&self) -> ExtensionState {
+        if self.enabled {
+            ExtensionState::Enabled
+        } else {
+            ExtensionState::Disabled
+        }
+    }
+
+    fn manifest(&self) -> ExtensionManifest {
+        self.manifest.clone()
+    }
+
+    fn on_load(&self) {}
+    fn on_unload(&self) {}
+}
+
 #[derive(Debug)]
 pub struct ExtensionManager<'a> {
     pub handle: &'a AppHandle,
     pub registry: ExtensionRegistry,
     pub extensions: Vec<Extension>,
+    pub loaded_extensions: Vec<Library>,
 }
 
 impl<'a> ExtensionManager<'a> {
@@ -33,6 +67,7 @@ impl<'a> ExtensionManager<'a> {
             handle,
             registry,
             extensions: vec![],
+            loaded_extensions: vec![],
         }
     }
 
