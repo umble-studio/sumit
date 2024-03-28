@@ -6,6 +6,22 @@ use tauri::{AppHandle, Manager};
 
 use super::{manifest::ExtensionManifest, registry::ExtensionRegistry};
 
+#[macro_export]
+macro_rules! declare_extension {
+    ($extension_type:ty, $constructor:path) => {
+        #[no_mangle]
+        pub extern "C" fn _extension_create() -> *mut dyn $crate::Extension {
+            // make sure the constructor is the correct type.
+            let constructor: fn() -> $extension_type = $constructor;
+
+            let object = constructor();
+            let boxed: Box<dyn $crate::Extension> = Box::new(object);
+
+            Box::into_raw(boxed)
+        }
+    };
+}
+
 #[derive(Debug)]
 pub struct Extension {
     pub manifest: ExtensionManifest,
