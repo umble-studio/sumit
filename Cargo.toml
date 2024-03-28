@@ -3,4 +3,3 @@ resolver = "2"
 members = [
     "src/app/src-tauri", "src/plugins/Finder/server", "src/plugit-proc-macro",
 ]
-exclude = [ "src/plugins/Finder/server" ]

@@ -10,20 +10,6 @@ pub struct ExtensionRegistry {
 }
 
 impl ExtensionRegistry {
-    pub fn register(&mut self, manifest_path: &str, manifest: ExtensionManifest) {
-        if !Self::is_registered(&self, &manifest.name) {
-            self.manifests.push((manifest_path.to_string(), manifest));
-        }
-    }
-
-    pub fn unregister(&mut self, name: &str) {
-        if Self::is_registered(&self, name) {
-            if let Some(manifest) = self.get_manifest(name) {
-                self.manifests.retain(|m| m.1.name != manifest.name);
-            }
-        }
-    }
-
     pub fn load_manifests(&mut self) -> Vec<String> {
         self.manifests.clear();
 
@@ -49,9 +35,16 @@ impl ExtensionRegistry {
 
                             if let Some(manifest) = self.get_manifest(path.as_str()) {
                                 let manifest_clone = manifest.clone();
-                                self.manifests.push((path.to_string(), manifest));
 
-                                println!("Registered manifest: {}", manifest_clone.name);
+                                if !self.is_registered(path.as_str()) {
+                                    self.manifests.push((path.to_string(), manifest));
+                                    println!("Register manifest: {}", manifest_clone.name);
+                                } else {
+                                    println!(
+                                        "Manifest already registered: {}",
+                                        manifest_clone.name
+                                    );
+                                }
                             } else {
                                 println!("Failed to get manifest: {}", path.as_str());
                             }
@@ -67,40 +60,39 @@ impl ExtensionRegistry {
         paths
     }
 
-    pub fn get_manifest(&self, path: &str) -> Option<ExtensionManifest> {
-        let manifest_path = Path::new(path);
+    pub fn get_manifest(&self, manifest_path: &str) -> Option<ExtensionManifest> {
+        let manifest_path = Path::new(manifest_path);
 
         if manifest_path.is_file() {
             if let Ok(content) = std::fs::read_to_string(manifest_path) {
                 if let Ok(manifest) = serde_json::from_str::<ExtensionManifest>(content.as_str()) {
                     Some(manifest)
                 } else {
-                    println!("Failed to parse manifest: {}", manifest_path.to_str().unwrap());
+                    println!(
+                        "Failed to parse manifest: {}",
+                        manifest_path.to_str().unwrap()
+                    );
                     None
                 }
             } else {
-                println!("Failed to read manifest file: {}", manifest_path.to_str().unwrap());
+                println!(
+                    "Failed to read manifest file: {}",
+                    manifest_path.to_str().unwrap()
+                );
                 None
             }
         } else {
             None
         }
-        
-        // let manifest = self.manifests.iter().find(|m| m.0 == path).clone();
-
-        // match manifest {
-        //     Some((_, manifest)) => Some(manifest.clone()),
-        //     None => None,
-        // }
     }
 
     pub fn get_manifests(&self) -> Vec<(String, ExtensionManifest)> {
         self.manifests.clone()
     }
 
-    fn is_registered(&self, name: &str) -> bool {
+    fn is_registered(&self, manifest_path: &str) -> bool {
         self.manifests
             .iter()
-            .any(|manifest| manifest.1.name == name)
+            .any(|manifest| manifest.0 == manifest_path)
     }
 }
