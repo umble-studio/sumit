@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct ExtensionManifest {
+pub struct Manifest {
     pub name: String,
     pub version: String,
     pub description: String,

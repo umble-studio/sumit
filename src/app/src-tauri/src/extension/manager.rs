@@ -10,7 +10,7 @@ use tauri::{utils::acl::manifest, AppHandle, Manager};
 
 use crate::extension;
 
-use super::{manifest::ExtensionManifest, registry::ExtensionRegistry};
+use super::{manifest::Manifest, registry::ExtensionRegistry};
 
 #[macro_export]
 macro_rules! declare_extension {
@@ -30,7 +30,7 @@ macro_rules! declare_extension {
 
 pub struct Extension<'a> {
     pub(crate) handle: Option<&'a AppHandle>,
-    pub(crate) manifest: ExtensionManifest,
+    pub(crate) manifest: Manifest,
     pub(crate) enabled: bool,
     pub(crate) instance: Option<Box<dyn IExtension>>,
     pub(crate) lib: Option<Library>,
@@ -42,7 +42,7 @@ pub trait IExtension: Any + Send + Sync {
 }
 
 impl<'a> Extension<'a> {
-    pub fn new(manifest: ExtensionManifest, handle: Option<&'a AppHandle>) -> Self {
+    pub fn new(manifest: Manifest, handle: Option<&'a AppHandle>) -> Self {
         Self {
             handle,
             manifest,
@@ -65,7 +65,7 @@ pub trait IExtensionState {
     fn state (&self) -> ExtensionState;
 }
 
-impl<'a> IExtensionState for Extension<'a> {
+impl IExtensionState for Extension<'_> {
     fn enable(&mut self) {
         self.enabled = true;
 
@@ -94,6 +94,16 @@ impl<'a> IExtensionState for Extension<'a> {
         } else {
             ExtensionState::Disabled
         }
+    }
+}
+
+pub trait ExtensionManifest {
+    fn manifest(&self) -> Manifest;
+}
+
+impl ExtensionManifest for Extension<'_> {
+    fn manifest(&self) -> Manifest {
+        self.manifest.clone()
     }
 }
 
@@ -135,7 +145,7 @@ impl<'a> ExtensionManager<'a> {
     pub fn load_extension(
         &mut self,
         manifest_path: &str,
-        manifest: ExtensionManifest,
+        manifest: Manifest,
     ) -> Result<(), tauri::Error> {
         type ExtensionCreate = extern "C" fn() -> *mut dyn IExtension;
         const EXTENSION_SYMBOL: &'static [u8] = b"_extension_create";

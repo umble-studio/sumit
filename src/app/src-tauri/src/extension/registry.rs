@@ -2,11 +2,11 @@ use dirs::document_dir;
 use glob::glob;
 use std::path::Path;
 
-use super::{constant::EXTENSION_DIRECTORY, manifest::ExtensionManifest};
+use super::{constant::EXTENSION_DIRECTORY, manifest::Manifest};
 
 #[derive(Debug, Default)]
 pub struct ExtensionRegistry {
-    pub manifests: Vec<(String, ExtensionManifest)>,
+    pub manifests: Vec<(String, Manifest)>,
 }
 
 impl ExtensionRegistry {
@@ -60,12 +60,12 @@ impl ExtensionRegistry {
         paths
     }
 
-    pub fn get_manifest(&self, manifest_path: &str) -> Option<ExtensionManifest> {
+    pub fn get_manifest(&self, manifest_path: &str) -> Option<Manifest> {
         let manifest_path = Path::new(manifest_path);
 
         if manifest_path.is_file() {
             if let Ok(content) = std::fs::read_to_string(manifest_path) {
-                if let Ok(manifest) = serde_json::from_str::<ExtensionManifest>(content.as_str()) {
+                if let Ok(manifest) = serde_json::from_str::<Manifest>(content.as_str()) {
                     Some(manifest)
                 } else {
                     println!(
@@ -86,7 +86,7 @@ impl ExtensionRegistry {
         }
     }
 
-    pub fn get_manifests(&self) -> Vec<(String, ExtensionManifest)> {
+    pub fn get_manifests(&self) -> Vec<(String, Manifest)> {
         self.manifests.clone()
     }
 
