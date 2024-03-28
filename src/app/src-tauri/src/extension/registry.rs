@@ -38,17 +38,22 @@ impl ExtensionRegistry {
         for entry in glob(pattern).expect("Failed to read glob pattern") {
             match entry {
                 Ok(path) => {
-                    println!("Found: {}", path.display());
+                    // println!("Found: {}", path.display());
 
                     if let Some(prefix) = path.file_stem() {
                         if prefix == "manifest" {
-                            println!("Loading manifest: {}", prefix.to_str().unwrap().to_string());
+                            println!("Loading manifest: {}", path.display().to_string());
 
                             let path = path.to_str().unwrap().to_string();
                             paths.push(path.clone());
 
                             if let Some(manifest) = self.get_manifest(path.as_str()) {
+                                let manifest_clone = manifest.clone();
                                 self.manifests.push((path.to_string(), manifest));
+
+                                println!("Registered manifest: {}", manifest_clone.name);
+                            } else {
+                                println!("Failed to get manifest: {}", path.as_str());
                             }
                         }
                     }
@@ -62,13 +67,31 @@ impl ExtensionRegistry {
         paths
     }
 
-    pub fn get_manifest(&self, name: &str) -> Option<ExtensionManifest> {
-        let manifest = self.manifests.iter().find(|m| m.1.name == name).clone();
+    pub fn get_manifest(&self, path: &str) -> Option<ExtensionManifest> {
+        let manifest_path = Path::new(path);
 
-        match manifest {
-            Some((_, manifest)) => Some(manifest.clone()),
-            None => None,
+        if manifest_path.is_file() {
+            if let Ok(content) = std::fs::read_to_string(manifest_path) {
+                if let Ok(manifest) = serde_json::from_str::<ExtensionManifest>(content.as_str()) {
+                    Some(manifest)
+                } else {
+                    println!("Failed to parse manifest: {}", manifest_path.to_str().unwrap());
+                    None
+                }
+            } else {
+                println!("Failed to read manifest file: {}", manifest_path.to_str().unwrap());
+                None
+            }
+        } else {
+            None
         }
+        
+        // let manifest = self.manifests.iter().find(|m| m.0 == path).clone();
+
+        // match manifest {
+        //     Some((_, manifest)) => Some(manifest.clone()),
+        //     None => None,
+        // }
     }
 
     pub fn get_manifests(&self) -> Vec<(String, ExtensionManifest)> {

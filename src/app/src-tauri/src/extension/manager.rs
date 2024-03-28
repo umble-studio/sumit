@@ -1,7 +1,11 @@
-use std::{any::Any, borrow::{Borrow, BorrowMut}};
+use std::{
+    any::Any,
+    borrow::{Borrow, BorrowMut},
+    path::Path,
+};
 
 use anyhow::anyhow;
-use libloading::Library;
+use libloading::{Library, Symbol};
 use tauri::{AppHandle, Manager};
 
 use super::{manifest::ExtensionManifest, registry::ExtensionRegistry};
@@ -10,12 +14,12 @@ use super::{manifest::ExtensionManifest, registry::ExtensionRegistry};
 macro_rules! declare_extension {
     ($extension_type:ty, $constructor:path) => {
         #[no_mangle]
-        pub extern "C" fn _extension_create() -> *mut dyn $crate::Extension {
+        pub extern "C" fn _extension_create() -> *mut dyn $crate::extension::manager::IExtension {
             // make sure the constructor is the correct type.
             let constructor: fn() -> $extension_type = $constructor;
 
             let object = constructor();
-            let boxed: Box<dyn $crate::Extension> = Box::new(object);
+            let boxed: Box<dyn $crate::extension::manager::IExtension> = Box::new(object);
 
             Box::into_raw(boxed)
         }
@@ -31,13 +35,13 @@ pub struct Extension {
 
 pub trait IExtension: Any + Send + Sync {
     fn state(&self) -> ExtensionState;
-    fn manifest(&self) -> ExtensionManifest;
+    // fn manifest(&self) -> ExtensionManifest;
     fn on_load(&self);
     fn on_unload(&self);
 }
 
 impl Extension {
-    pub fn new(&self, manifest: ExtensionManifest) -> Self {
+    pub fn new(manifest: ExtensionManifest) -> Self {
         Self {
             manifest,
             enabled: false,
@@ -61,16 +65,16 @@ impl IExtension for Extension {
         }
     }
 
-    fn manifest(&self) -> ExtensionManifest {
-        self.manifest.clone()
-    }
+    // fn manifest(&self) -> ExtensionManifest {
+    //     self.manifest.clone()
+    // }
 
     fn on_load(&self) {}
     fn on_unload(&self) {}
 }
 
 #[derive(Debug)]
-pub struct ExtensionManager<'a> {
+pub(crate) struct ExtensionManager<'a> {
     pub handle: &'a AppHandle,
     pub registry: ExtensionRegistry,
     pub extensions: Vec<Extension>,
@@ -92,9 +96,9 @@ impl<'a> ExtensionManager<'a> {
 
         for manifest_info in self.registry.get_manifests() {
             let manifest_path = manifest_info.0;
-            let manifest
-            
-            if let Some(extension) = self.load_extension(&manifest_path, manifest.clone()) {
+            let manifest = manifest_info.1;
+
+            if let Ok(_) = self.load_extension(&manifest_path, manifest.clone()) {
                 println!("Loaded extension: {}", manifest.name);
             } else {
                 println!("Failed to load extension: {}", manifest.name);
@@ -109,8 +113,58 @@ impl<'a> ExtensionManager<'a> {
         &mut self,
         manifest_path: &str,
         manifest: ExtensionManifest,
-    ) -> Option<Extension> {
-        todo!()
+    ) -> Result<(), tauri::Error> {
+        type ExtensionCreate = extern "C" fn() -> *mut dyn IExtension;
+        const EXTENSION_SYMBOL: &'static [u8] = b"_extension_create";
+
+        let manifest_clone = manifest.clone();
+
+        if let Some(server_info) = manifest_clone.server {
+            let filename = Path::new(manifest_path)
+                .parent()
+                .unwrap()
+                .join(server_info.entrypoint);
+
+            println!(
+                "Loading extension: {} at path: {}",
+                manifest.name,
+                filename.to_str().unwrap().to_string()
+            );
+
+            unsafe {
+                if let Ok(lib) = Library::new(filename) {
+                    let extension = Extension::new(manifest);
+
+                    let constructor: Symbol<ExtensionCreate> =
+                        lib.get(EXTENSION_SYMBOL).expect(&format!(
+                            "The `{}` symbol wasn't found.",
+                            String::from_utf8_lossy(EXTENSION_SYMBOL).to_string()
+                        ));
+
+                    let boxed_raw = constructor();
+                    let instance = Box::from_raw(boxed_raw);
+
+                    instance.on_load();
+                    self.extensions.push(extension);
+
+                    // println!("Loaded extension: {}", manifest_clone.name);
+
+                    Ok(())
+                } else {
+                    println!(
+                        "Failed to find library {} at path: {}",
+                        manifest.name, manifest_path
+                    );
+                    Err(tauri::Error::Anyhow(anyhow!(
+                        "Failed to find library {} at path: {}",
+                        manifest.name,
+                        manifest_path
+                    )))
+                }
+            }
+        } else {
+            Ok(())
+        }
     }
 
     /**
@@ -182,6 +236,37 @@ impl<'a> ExtensionManager<'a> {
             }
         } else {
             None
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_load_extension() {
+        const MANIFEST: &str = r"C:\Users\bubbl\Documents\sumit-app\src\plugins\Finder\server\dist\server.dll";
+
+        unsafe {
+            type ExtensionCreate = extern "C" fn() -> *mut dyn IExtension;
+            const EXTENSION_SYMBOL: &'static [u8] = b"_extension_create";
+
+            if let Ok(lib) = Library::new(MANIFEST) {
+                let constructor: Symbol<ExtensionCreate> =
+                    lib.get(EXTENSION_SYMBOL).expect(&format!(
+                        "The `{}` symbol wasn't found.",
+                        String::from_utf8_lossy(EXTENSION_SYMBOL).to_string()
+                    ));
+    
+                let boxed_raw = constructor();
+                let instance = Box::from_raw(boxed_raw);
+    
+                instance.on_load();
+                assert!(true);
+            } else {
+                assert!(false);
+            }
         }
     }
 }

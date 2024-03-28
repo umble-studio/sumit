@@ -82,7 +82,8 @@ fn main() {
     let file_watcher =
         watcher::ExtensionWatcher::new(&handle).expect("Failed to watch extensions");
 
-    let extension_manager = ExtensionManager::new(&handle);
+    let mut extension_manager = ExtensionManager::new(&handle);
+    extension_manager.load_extensions();
 
     app.run(|app_handle, event| {});
 }
