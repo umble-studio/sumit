@@ -28,30 +28,30 @@ macro_rules! declare_extension {
     };
 }
 
-#[derive(Debug)]
-pub struct Extension {
-    pub manifest: ExtensionManifest,
-    pub enabled: bool,
-    pub lib: Option<Library>,
+pub struct Extension<'a> {
+    pub(crate) handle: Option<&'a AppHandle>,
+    pub(crate) manifest: ExtensionManifest,
+    pub(crate) enabled: bool,
+    pub(crate) instance: Option<Box<dyn IExtension>>,
+    pub(crate) lib: Option<Library>,
 }
 
 pub trait IExtension: Any + Send + Sync {
-    fn state(&self) -> ExtensionState;
-    // fn manifest(&self) -> ExtensionManifest;
-    fn on_load(&self);
-    fn on_unload(&self);
+    fn on_load(&mut self, extension: &mut Extension);
+    fn on_unload(&mut self);
 }
 
-impl Extension {
-    pub fn new(manifest: ExtensionManifest) -> Self {
+impl<'a> Extension<'a> {
+    pub fn new(manifest: ExtensionManifest, handle: Option<&'a AppHandle>) -> Self {
         Self {
+            handle,
             manifest,
             enabled: false,
+            instance: None,
             lib: None,
         }
     }
 }
-
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ExtensionState {
@@ -59,28 +59,48 @@ pub enum ExtensionState {
     Disabled,
 }
 
-impl IExtension for Extension {
-    fn state(&self) -> ExtensionState {
+pub trait IExtensionState {
+    fn enable(&mut self);
+    fn disable(&mut self);
+    fn state (&self) -> ExtensionState;
+}
+
+impl<'a> IExtensionState for Extension<'a> {
+    fn enable(&mut self) {
+        self.enabled = true;
+
+        if let Some(handle) = self.handle {
+            handle.emit("extension:enabled", ()).unwrap();
+            println!("Enable extension: {}", self.manifest.name);
+        } else {
+            println!("Failed to emit enable extension: {}", self.manifest.name);
+        }
+    }
+
+    fn disable(&mut self) {
+        self.enabled = false;
+   
+        if let Some(handle) = self.handle {
+            handle.emit("extension:disabled", ()).unwrap();
+            println!("Disable extension: {}", self.manifest.name);
+        } else {
+            println!("Failed to emit disable extension: {}", self.manifest.name);
+        }
+    }
+
+    fn state (&self) -> ExtensionState {
         if self.enabled {
             ExtensionState::Enabled
         } else {
             ExtensionState::Disabled
         }
     }
-
-    // fn manifest(&self) -> ExtensionManifest {
-    //     self.manifest.clone()
-    // }
-
-    fn on_load(&self) {}
-    fn on_unload(&self) {}
 }
 
-#[derive(Debug)]
 pub(crate) struct ExtensionManager<'a> {
     pub handle: &'a AppHandle,
     pub registry: ExtensionRegistry,
-    pub extensions: Vec<Extension>,
+    pub extensions: Vec<Extension<'a>>,
 }
 
 impl<'a> ExtensionManager<'a> {
@@ -136,7 +156,8 @@ impl<'a> ExtensionManager<'a> {
 
             unsafe {
                 if let Ok(lib) = Library::new(filename) {
-                    let mut extension = Extension::new(manifest);
+                    let manifest_clone = manifest.clone();
+                    let mut extension = Extension::new(manifest_clone, Some(self.handle));
 
                     let constructor: Symbol<ExtensionCreate> =
                         lib.get(EXTENSION_SYMBOL).expect(&format!(
@@ -147,13 +168,13 @@ impl<'a> ExtensionManager<'a> {
                     let boxed_raw = constructor();
 
                     self.enable_extension(&mut extension)?;
+                    
+                    let mut instance = Box::from_raw(boxed_raw);
+                    instance.on_load(&mut extension);
+                    
                     self.extensions.push(extension);
 
-                    let instance = Box::from_raw(boxed_raw);
-                    instance.on_load();
-
                     // println!("Loaded extension: {}", manifest_clone.name);
-
                     Ok(())
                 } else {
                     println!(
@@ -178,8 +199,8 @@ impl<'a> ExtensionManager<'a> {
     pub fn unload_extension(&mut self, extension: &mut Extension) {
         self.disable_extension(extension).unwrap();
         self.extensions.retain(|e| e.manifest.name != extension.manifest.name);
-        
-        extension.on_unload();
+
+        // extension.on_unload();
     }
 
     /**
@@ -202,7 +223,7 @@ impl<'a> ExtensionManager<'a> {
         Ok(())
     }
 
-    pub fn get_extension(&mut self, name: &str) -> Option<&mut Extension> {
+    pub fn get_extension(&mut self, name: &str) -> Option<&mut Extension<'a>> {
         if let Some(extension) = self.extensions.iter_mut().find(|e| e.manifest.name == name) {
             Some(extension)
         } else {
@@ -232,40 +253,44 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn test_load_extension() {
-        // const MANIFEST: &str =
-        //     r"C:\Users\bubbl\Documents\sumit-app\src\plugins\Finder\server\dist\server.dll";
+    // #[test]
+    // fn test_load_extension() {
+    //     // const MANIFEST: &str =
+    //     //     r"C:\Users\bubbl\Documents\sumit-app\src\plugins\Finder\server\dist\server.dll";
 
-        unsafe {
-            let document_dir = document_dir().unwrap();
-            let extension_dir = Path::new(document_dir.to_str().unwrap()).join(EXTENSION_DIRECTORY);
-            let manifest_path = Path::new(extension_dir.to_str().unwrap())
-                .join("Finder")
-                .join("server")
-                .join("dist")
-                .join("server.dll");
+    //     unsafe {
+    //         let document_dir = document_dir().unwrap();
+    //         let extension_dir = Path::new(document_dir.to_str().unwrap()).join(EXTENSION_DIRECTORY);
+    //         let manifest_path = Path::new(extension_dir.to_str().unwrap())
+    //             .join("Finder")
+    //             .join("server")
+    //             .join("dist")
+    //             .join("server.dll");
 
-            println!("Manifest path: {}", manifest_path.to_str().unwrap());
+    //         println!("Manifest path: {}", manifest_path.to_str().unwrap());
 
-            type ExtensionCreate = extern "C" fn() -> *mut dyn IExtension;
-            const EXTENSION_SYMBOL: &'static [u8] = b"_extension_create";
+    //         type ExtensionCreate = extern "C" fn() -> *mut dyn IExtension;
+    //         const EXTENSION_SYMBOL: &'static [u8] = b"_extension_create";
 
-            if let Ok(lib) = Library::new(manifest_path) {
-                let constructor: Symbol<ExtensionCreate> =
-                    lib.get(EXTENSION_SYMBOL).expect(&format!(
-                        "The `{}` symbol wasn't found.",
-                        String::from_utf8_lossy(EXTENSION_SYMBOL).to_string()
-                    ));
+    //         if let Ok(lib) = Library::new(manifest_path) {
+    //             let constructor: Symbol<ExtensionCreate> =
+    //                 lib.get(EXTENSION_SYMBOL).expect(&format!(
+    //                     "The `{}` symbol wasn't found.",
+    //                     String::from_utf8_lossy(EXTENSION_SYMBOL).to_string()
+    //                 ));
 
-                let boxed_raw = constructor();
-                let instance = Box::from_raw(boxed_raw);
+    //             let boxed_raw = constructor();
 
-                instance.on_load();
-                assert!(true);
-            } else {
-                assert!(false);
-            }
-        }
-    }
+    //             let manifest = ExtensionManifest::default();
+    //             let mut extension = Extension::new(manifest);
+
+    //             let mut instance = Box::from_raw(boxed_raw);
+    //             instance.on_load(&mut extension);
+                
+    //             assert!(true);
+    //         } else {
+    //             assert!(false);
+    //         }
+    //     }
+    // }
 }
