@@ -27,8 +27,7 @@ pub struct ExtensionManager<'a> {
 
 impl<'a> ExtensionManager<'a> {
     pub fn new(handle: &'a AppHandle) -> Self {
-        let mut registry = ExtensionRegistry::default();
-        registry.load_manifests();
+        let registry = ExtensionRegistry::default();
 
         Self {
             handle,
@@ -38,6 +37,8 @@ impl<'a> ExtensionManager<'a> {
     }
 
     pub fn load_extensions(&mut self) {
+        self.registry.load_manifests();
+
         for manifest in self.registry.get_manifests() {
             if let Some(extension) = self.load_extension(todo!(), manifest.clone()) {
                 println!("Loaded extension: {}", manifest.name);
