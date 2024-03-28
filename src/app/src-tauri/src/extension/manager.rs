@@ -1,3 +1,6 @@
+use anyhow::anyhow;
+use tauri::{AppHandle, Manager};
+
 use super::{manifest::ExtensionManifest, registry::ExtensionRegistry};
 
 #[derive(Debug)]
@@ -15,21 +18,39 @@ impl Extension {
     }
 }
 
-#[derive(Debug, Default)]
-pub struct ExtensionManager {
+#[derive(Debug)]
+pub struct ExtensionManager<'a> {
+    pub handle: &'a AppHandle,
     pub registry: ExtensionRegistry,
     pub extensions: Vec<Extension>,
 }
 
-impl ExtensionManager {
+impl<'a> ExtensionManager<'a> {
+    pub fn new(handle: &'a AppHandle) -> Self {
+        let mut registry = ExtensionRegistry::default();
+        registry.load_manifests();
+
+        Self {
+            handle,
+            registry,
+            extensions: vec![],
+        }
+    }
+
     pub fn load_extensions(&mut self) {
-        todo!()
+        for manifest in self.registry.get_manifests() {
+            if let Some(extension) = self.load_extension(todo!(), manifest.clone()) {
+                println!("Loaded extension: {}", manifest.name);
+            } else {
+                println!("Failed to load extension: {}", manifest.name);
+            }
+        }
     }
 
     /**
      * Load a server side extension
      */
-    pub fn load_extension(&mut self, manifest_path: &str, manifest: ExtensionManifest) {
+    pub fn load_extension(&mut self, manifest_path: &str, manifest: ExtensionManifest) -> Option<Extension> {
         todo!()
     }
 
@@ -43,24 +64,28 @@ impl ExtensionManager {
     /**
      * Enable an extension on client & server side
      */
-    pub fn enable_extension(&mut self, name: &str) -> Result<(), ()> {
+    pub fn enable_extension(&mut self, name: &str) -> Result<(), tauri::Error> {
         if let Some(extension) = self.get_extension(name) {
             extension.enabled = true;
+            self.handle.emit("extension:enabled", ())?;
+
             Ok(())
         } else {
-            Err(())
+            Err(tauri::Error::Anyhow(anyhow!("Failed to enable extension: {}", name)))
         }
     }
 
     /**
      * Disable an extension on client & server side
      */
-    pub fn disable_extension(&mut self, name: &str) -> Result<(), ()> {
+    pub fn disable_extension(&mut self, name: &str) -> Result<(), tauri::Error> {
         if let Some(extension) = self.get_extension(name) {
             extension.enabled = false;
+            self.handle.emit("extension:disabled", ())?;
+
             Ok(())
         } else {
-            Err(())
+            Err(tauri::Error::Anyhow(anyhow!("Failed to disable extension: {}", name)))
         }
     }
 
