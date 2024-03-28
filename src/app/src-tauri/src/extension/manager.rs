@@ -1,116 +1,32 @@
-use std::{
-    any::Any,
-    borrow::{Borrow, BorrowMut},
-    path::Path,
-};
-
+use std::path::Path;
 use anyhow::anyhow;
 use libloading::{Library, Symbol};
-use tauri::{utils::acl::manifest, AppHandle, Manager};
+use tauri::{AppHandle, Manager};
 
-use crate::extension;
+use crate::extension::extension::Extension;
 
-use super::{manifest::Manifest, registry::ExtensionRegistry};
+use super::{extension::ExtensionHandle, manifest::Manifest, registry::ExtensionRegistry};
 
 #[macro_export]
 macro_rules! declare_extension {
     ($extension_type:ty, $constructor:path) => {
         #[no_mangle]
-        pub extern "C" fn _extension_create() -> *mut dyn $crate::extension::manager::IExtension {
+        pub extern "C" fn _extension_create() -> *mut dyn $crate::extension::extension::IExtension {
             // make sure the constructor is the correct type.
             let constructor: fn() -> $extension_type = $constructor;
 
             let object = constructor();
-            let boxed: Box<dyn $crate::extension::manager::IExtension> = Box::new(object);
+            let boxed: Box<dyn $crate::extension::extension::IExtension> = Box::new(object);
 
             Box::into_raw(boxed)
         }
     };
 }
 
-pub struct Extension<'a> {
-    pub(crate) handle: Option<&'a AppHandle>,
-    pub(crate) manifest: Manifest,
-    pub(crate) enabled: bool,
-    pub(crate) instance: Option<Box<dyn IExtension>>,
-    pub(crate) lib: Option<Library>,
-}
-
-pub trait IExtension: Any + Send + Sync {
-    fn on_load(&mut self, extension: &mut Extension);
-    fn on_unload(&mut self);
-}
-
-impl<'a> Extension<'a> {
-    pub fn new(manifest: Manifest, handle: Option<&'a AppHandle>) -> Self {
-        Self {
-            handle,
-            manifest,
-            enabled: false,
-            instance: None,
-            lib: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum ExtensionState {
-    Enabled,
-    Disabled,
-}
-
-pub trait IExtensionState {
-    fn enable(&mut self);
-    fn disable(&mut self);
-    fn state (&self) -> ExtensionState;
-}
-
-impl IExtensionState for Extension<'_> {
-    fn enable(&mut self) {
-        self.enabled = true;
-
-        if let Some(handle) = self.handle {
-            handle.emit("extension:enabled", ()).unwrap();
-            println!("Enable extension: {}", self.manifest.name);
-        } else {
-            println!("Failed to emit enable extension: {}", self.manifest.name);
-        }
-    }
-
-    fn disable(&mut self) {
-        self.enabled = false;
-   
-        if let Some(handle) = self.handle {
-            handle.emit("extension:disabled", ()).unwrap();
-            println!("Disable extension: {}", self.manifest.name);
-        } else {
-            println!("Failed to emit disable extension: {}", self.manifest.name);
-        }
-    }
-
-    fn state (&self) -> ExtensionState {
-        if self.enabled {
-            ExtensionState::Enabled
-        } else {
-            ExtensionState::Disabled
-        }
-    }
-}
-
-pub trait ExtensionManifest {
-    fn manifest(&self) -> Manifest;
-}
-
-impl ExtensionManifest for Extension<'_> {
-    fn manifest(&self) -> Manifest {
-        self.manifest.clone()
-    }
-}
-
 pub(crate) struct ExtensionManager<'a> {
     pub handle: &'a AppHandle,
     pub registry: ExtensionRegistry,
-    pub extensions: Vec<Extension<'a>>,
+    pub extensions: Vec<ExtensionHandle<'a>>,
 }
 
 impl<'a> ExtensionManager<'a> {
@@ -147,7 +63,7 @@ impl<'a> ExtensionManager<'a> {
         manifest_path: &str,
         manifest: Manifest,
     ) -> Result<(), tauri::Error> {
-        type ExtensionCreate = extern "C" fn() -> *mut dyn IExtension;
+        type ExtensionCreate = extern "C" fn() -> *mut dyn Extension;
         const EXTENSION_SYMBOL: &'static [u8] = b"_extension_create";
 
         let manifest_clone = manifest.clone();
@@ -167,7 +83,7 @@ impl<'a> ExtensionManager<'a> {
             unsafe {
                 if let Ok(lib) = Library::new(filename) {
                     let manifest_clone = manifest.clone();
-                    let mut extension = Extension::new(manifest_clone, Some(self.handle));
+                    let mut extension = ExtensionHandle::new(manifest_clone, Some(self.handle));
 
                     let constructor: Symbol<ExtensionCreate> =
                         lib.get(EXTENSION_SYMBOL).expect(&format!(
@@ -206,7 +122,7 @@ impl<'a> ExtensionManager<'a> {
     /**
      * Unload a server side extension
      */
-    pub fn unload_extension(&mut self, extension: &mut Extension) {
+    pub fn unload_extension(&mut self, extension: &mut ExtensionHandle) {
         self.disable_extension(extension).unwrap();
         self.extensions.retain(|e| e.manifest.name != extension.manifest.name);
 
@@ -216,7 +132,7 @@ impl<'a> ExtensionManager<'a> {
     /**
      * Enable an extension on client & server side
      */
-    pub fn enable_extension(&mut self, extension: &mut Extension) -> Result<(), tauri::Error> {
+    pub fn enable_extension(&mut self, extension: &mut ExtensionHandle) -> Result<(), tauri::Error> {
         extension.enabled = true;
         self.handle.emit("extension:enabled", ())?;
 
@@ -226,14 +142,14 @@ impl<'a> ExtensionManager<'a> {
     /**
      * Disable an extension on client & server side
      */
-    pub fn disable_extension(&mut self, extension: &mut Extension) -> Result<(), tauri::Error> {
+    pub fn disable_extension(&mut self, extension: &mut ExtensionHandle) -> Result<(), tauri::Error> {
         extension.enabled = false;
         self.handle.emit("extension:disabled", ())?;
 
         Ok(())
     }
 
-    pub fn get_extension(&mut self, name: &str) -> Option<&mut Extension<'a>> {
+    pub fn get_extension(&mut self, name: &str) -> Option<&mut ExtensionHandle<'a>> {
         if let Some(extension) = self.extensions.iter_mut().find(|e| e.manifest.name == name) {
             Some(extension)
         } else {

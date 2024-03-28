@@ -1,4 +1,5 @@
 pub mod manager;
-pub(crate) mod registry;
 pub mod manifest;
+pub mod extension;
+pub(crate) mod registry;
 pub(crate) mod constant;

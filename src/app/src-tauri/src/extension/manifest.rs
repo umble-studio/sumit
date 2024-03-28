@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::extension::ExtensionHandle;
+
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     pub name: String,
@@ -19,4 +21,14 @@ pub struct Client {
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Server {
     pub entrypoint: String
+}
+
+pub trait ExtensionManifest {
+    fn manifest(&self) -> Manifest;
+}
+
+impl ExtensionManifest for ExtensionHandle<'_> {
+    fn manifest(&self) -> Manifest {
+        self.manifest.clone()
+    }
 }
