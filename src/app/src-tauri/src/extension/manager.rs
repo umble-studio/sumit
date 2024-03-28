@@ -39,8 +39,11 @@ impl<'a> ExtensionManager<'a> {
     pub fn load_extensions(&mut self) {
         self.registry.load_manifests();
 
-        for manifest in self.registry.get_manifests() {
-            if let Some(extension) = self.load_extension(todo!(), manifest.clone()) {
+        for manifest_info in self.registry.get_manifests() {
+            let manifest_path = manifest_info.0;
+            let manifest = manifest_info.1;
+
+            if let Some(extension) = self.load_extension(&manifest_path, manifest.clone()) {
                 println!("Loaded extension: {}", manifest.name);
             } else {
                 println!("Failed to load extension: {}", manifest.name);
@@ -51,7 +54,11 @@ impl<'a> ExtensionManager<'a> {
     /**
      * Load a server side extension
      */
-    pub fn load_extension(&mut self, manifest_path: &str, manifest: ExtensionManifest) -> Option<Extension> {
+    pub fn load_extension(
+        &mut self,
+        manifest_path: &str,
+        manifest: ExtensionManifest,
+    ) -> Option<Extension> {
         todo!()
     }
 
@@ -72,7 +79,10 @@ impl<'a> ExtensionManager<'a> {
 
             Ok(())
         } else {
-            Err(tauri::Error::Anyhow(anyhow!("Failed to enable extension: {}", name)))
+            Err(tauri::Error::Anyhow(anyhow!(
+                "Failed to enable extension: {}",
+                name
+            )))
         }
     }
 
@@ -86,7 +96,10 @@ impl<'a> ExtensionManager<'a> {
 
             Ok(())
         } else {
-            Err(tauri::Error::Anyhow(anyhow!("Failed to disable extension: {}", name)))
+            Err(tauri::Error::Anyhow(anyhow!(
+                "Failed to disable extension: {}",
+                name
+            )))
         }
     }
 
