@@ -1,5 +1,5 @@
 [workspace]
 resolver = "2"
 members = [
-    "src/app/src-tauri", "src/plugins/Finder/server", "src/plugit-proc-macro",
+    "src/app/src-tauri", "src/plugins/Finder/server",
 ]

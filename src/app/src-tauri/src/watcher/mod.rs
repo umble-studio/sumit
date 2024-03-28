@@ -71,7 +71,7 @@ impl ExtensionWatcher {
         match modify_kind {
             ModifyKind::Any => {
                 for path in &event.paths {
-                    println!("File changed: {:?}", &path);
+                    // println!("File changed: {:?}", &path);
 
                     app.emit(
                         "FileChanged",
