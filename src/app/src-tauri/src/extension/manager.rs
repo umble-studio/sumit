@@ -242,26 +242,42 @@ impl<'a> ExtensionManager<'a> {
 
 #[cfg(test)]
 mod tests {
+    use dirs::document_dir;
+    use tauri::utils::acl::manifest;
+
+    use crate::extension::constant::EXTENSION_DIRECTORY;
+
     use super::*;
 
     #[test]
     fn test_load_extension() {
-        const MANIFEST: &str = r"C:\Users\bubbl\Documents\sumit-app\src\plugins\Finder\server\dist\server.dll";
+        // const MANIFEST: &str =
+        //     r"C:\Users\bubbl\Documents\sumit-app\src\plugins\Finder\server\dist\server.dll";
 
         unsafe {
+            let document_dir = document_dir().unwrap();
+            let extension_dir = Path::new(document_dir.to_str().unwrap()).join(EXTENSION_DIRECTORY);
+            let manifest_path = Path::new(extension_dir.to_str().unwrap())
+                .join("Finder")
+                .join("server")
+                .join("dist")
+                .join("server.dll");
+            
+            println!("Manifest path: {}", manifest_path.to_str().unwrap());
+
             type ExtensionCreate = extern "C" fn() -> *mut dyn IExtension;
             const EXTENSION_SYMBOL: &'static [u8] = b"_extension_create";
 
-            if let Ok(lib) = Library::new(MANIFEST) {
+            if let Ok(lib) = Library::new(manifest_path) {
                 let constructor: Symbol<ExtensionCreate> =
                     lib.get(EXTENSION_SYMBOL).expect(&format!(
                         "The `{}` symbol wasn't found.",
                         String::from_utf8_lossy(EXTENSION_SYMBOL).to_string()
                     ));
-    
+
                 let boxed_raw = constructor();
                 let instance = Box::from_raw(boxed_raw);
-    
+
                 instance.on_load();
                 assert!(true);
             } else {
