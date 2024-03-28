@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use extension::manager::ExtensionManager;
 use global_shortcuts::GlobalShortcuts;
 use std::sync::Arc;
 use std::{
@@ -49,7 +50,8 @@ fn main() {
         .setup(move |app| {
             let window = app.get_window("main").unwrap();
 
-            #[cfg(debug_assertions)] // only include this code on debug builds
+            // Only include this code on debug builds
+            #[cfg(debug_assertions)]
             {
                 let webview = window.get_webview_window("main").unwrap();
                 webview.open_devtools();
@@ -77,8 +79,10 @@ fn main() {
 
     let handle = app.handle();
 
-    let mut file_watcher =
+    let file_watcher =
         watcher::ExtensionWatcher::new(&handle).expect("Failed to watch extensions");
+
+    let extension_manager = ExtensionManager::new(&handle);
 
     app.run(|app_handle, event| {});
 }
