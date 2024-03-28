@@ -11,12 +11,12 @@ use super::{extension::ExtensionHandle, manifest::Manifest, registry::ExtensionR
 macro_rules! declare_extension {
     ($extension_type:ty, $constructor:path) => {
         #[no_mangle]
-        pub extern "C" fn _extension_create() -> *mut dyn $crate::extension::extension::IExtension {
+        pub extern "C" fn _extension_create() -> *mut dyn $crate::extension::extension::Extension {
             // make sure the constructor is the correct type.
             let constructor: fn() -> $extension_type = $constructor;
 
             let object = constructor();
-            let boxed: Box<dyn $crate::extension::extension::IExtension> = Box::new(object);
+            let boxed: Box<dyn $crate::extension::extension::Extension> = Box::new(object);
 
             Box::into_raw(boxed)
         }
